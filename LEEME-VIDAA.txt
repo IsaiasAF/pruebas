@@ -1,38 +1,24 @@
-XuperTV para VIDAA — paquete HTML5 (build 1.0.0)
+XuperTV para Hisense VIDAA U9 — versión 1.0.1
+
+OBJETIVO
+Fuente de aplicación web HTML5 preparada para pruebas en televisores Hisense VIDAA, con perfil visual 1920x1080 y controles remotos direccionales.
+
+OPTIMIZACIONES PARA EL HISENSE 50A65NV
+- Navegación con flechas, OK/Enter y regreso (incluye códigos de tecla Back comunes en VIDAA).
+- Catálogos grandes cargados por bloques de 48 fichas para reducir el trabajo inicial de renderizado.
+- Imágenes con carga diferida; favoritos e historial locales.
+- Interfaz 16:9, con distribución adaptable y foco visible para control remoto.
 
 CONTENIDO
-- index.html, style.css, app.js: aplicación HTML5 para TV.
-- data/catalog.json: catálogo combinado de las dos aplicaciones entregadas.
-- assets/: recursos gráficos extraídos de Roku y webOS.
+- 638 fichas combinadas de las fuentes Roku y webOS.
+- La captura de catálogo no contiene enlaces de reproducción para la mayoría de las fichas.
+- Los proyectos recibidos no proporcionaron una lista de canales en vivo ni credenciales de portal. Por eso no se inventan canales ni enlaces.
+- La reproducción HTML5 solo funcionará con URLs reales y formatos/servidores compatibles con el firmware.
 
-INTEGRACIÓN REALIZADA
-- Se combinaron 610 registros de la instantánea webOS + 28 registros del catálogo webOS local.
-- Se conservaron pósters, sinopsis, metadatos y filas/categorías disponibles.
-- Se integraron identidad visual y recursos de Roku.
-- Se implementaron navegación por D-pad/OK/Back, búsqueda, filtros, ficha de contenido,
-  favoritos, historial y reproductor HTML5 para los títulos que sí incluyen streamUrl.
+PRUEBA
+1. Publica esta carpeta en un servidor HTTP/HTTPS accesible desde la TV. Para probar en una red local puedes iniciar `python -m http.server 8080` desde esta carpeta y usar la IP de tu PC:8080.
+2. En el navegador de la TV, si el firmware conserva el modo de desarrollador web, abre `hisense://debug` e introduce la URL de la aplicación. La disponibilidad y el flujo exacto dependen de la versión de firmware/región; no es un instalador USB ni una certificación para VIDAA Store.
+3. Comprueba flechas, OK, regreso, scroll del catálogo, búsqueda y reproducción de una URL de prueba compatible.
 
-LÍMITES DETECTADOS EN LOS ARCHIVOS DE ORIGEN
-- Los 610 registros de la instantánea del portal tienen streamUrl vacío.
-- La sesión del portal webOS no tiene userId, userToken ni portalCode.
-- La sección Roku de TV en vivo tiene lógica de conexión, pero este ZIP no contiene
-  una lista de canales con URLs activas ni una sesión de servicio configurada.
-- Por ello no se fabricaron canales ni enlaces de reproducción. Se incluyen las
-  muestras abiertas de dominio público que sí tenían URL de video en catalog.js.
-
-VIDAA / INSTALACIÓN
-Este ZIP es el paquete fuente web HTML5, no un paquete firmado listo para instalar
-desde USB ni un IPK de webOS. VIDAA distribuye apps mediante su proceso de partner/
-certificación y las aplicaciones hosted HTML5 se sirven desde una URL HTTPS.
-Para una prueba en TV compatible, publica el contenido de esta carpeta en un servidor
-HTTPS y ábrelo desde el navegador de la TV; la instalación como tile/sideload requiere
-las herramientas y credenciales de desarrollador VIDAA que correspondan al modelo/
-firmware. No se puede generar una firma oficial VIDAA sin esas credenciales.
-
-PRUEBA LOCAL
-Desde esta carpeta ejecuta un servidor HTTP (por ejemplo: python -m http.server 8080)
-y abre http://localhost:8080. Para TV, usa HTTPS y una IP/dominio accesible desde la red.
-
-NOTA
-La app utiliza imágenes remotas del catálogo cuando así venían en la instantánea;
-para mostrarlas, la TV debe tener internet y el servidor de imágenes debe seguir activo.
+IMPORTANTE
+Esta entrega es una aplicación web alojada para pruebas, no un paquete VIDAA firmado. No puedo garantizar la instalación como app del launcher hasta validar el firmware concreto del televisor y el método de despliegue habilitado en él. La versión VIDAA U9 y el modelo 50A65NV orientan el diseño, pero el navegador/firmware puede variar.

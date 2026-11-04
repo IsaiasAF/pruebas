@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const $=s=>document.querySelector(s), screen=$("#screen"), modal=$("#modal"), detail=$("#detail"), player=$("#player"), video=$("#video");
-let catalog={items:[]}, view="home", selected=null, activeFilter="Todos", searchTerm="", focusIndex=0;
-const store={get(k){try{return JSON.parse(localStorage.getItem("xuper_"+k)||"[]")}catch(e){return[]}},set(k,v){localStorage.setItem("xuper_"+k,JSON.stringify(v))}};
+let catalog={items:[]}, view="home", selected=null, activeFilter="Todos", searchTerm="", focusIndex=0, gridLimit=48, lastFocus=null;
+const store={get(k){try{return JSON.parse(localStorage.getItem("xuper_"+k)||"[]")}catch(e){return[]}},set(k,v){try{localStorage.setItem("xuper_"+k,JSON.stringify(v))}catch(e){toast("No hay espacio para guardar este cambio.")}}};
 const favorites=()=>store.get("favorites"), history=()=>store.get("history");
 const safe=(s)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const items=()=>catalog.items||[];
@@ -24,11 +24,13 @@ function renderHome(){
 function categoryChips(list){let cats=["Todos",...new Set(list.flatMap(x=>(x.genres||[]).filter(Boolean)))].slice(0,24);return `<div class="filterbar">${cats.map(c=>`<button class="chip ${c===activeFilter?"active":""}" data-filter="${safe(c)}">${safe(c)}</button>`).join("")}</div>`}
 function renderGrid(title,list,filterable=true){
  let filtered=activeFilter==="Todos"?list:list.filter(x=>(x.genres||[]).includes(activeFilter));
- screen.innerHTML=`<h1 class="page-title">${safe(title)}</h1><div class="subtle">${filtered.length} títulos disponibles en el catálogo</div>${filterable?categoryChips(list):""}<div class="grid">${filtered.map(card).join("")}</div>`;
- document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{activeFilter=b.dataset.filter;renderGrid(title,list,filterable)});
+ let visible=filtered.slice(0,gridLimit);
+ screen.innerHTML=`<h1 class="page-title">${safe(title)}</h1><div class="subtle">Mostrando ${visible.length} de ${filtered.length} títulos</div>${filterable?categoryChips(list):""}<div class="grid">${visible.map(card).join("")}</div>${visible.length<filtered.length?`<div class="more-wrap"><button class="secondary" id="loadMore">Cargar más títulos</button></div>`:""}`;
+ document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{activeFilter=b.dataset.filter;gridLimit=48;renderGrid(title,list,filterable)});
+ const more=$("#loadMore");if(more)more.onclick=()=>{gridLimit+=48;renderGrid(title,list,filterable);const firstNew=screen.querySelectorAll("[data-id]")[visible.length];if(firstNew)firstNew.focus()};
  bindCards();
 }
-function navigate(v){view=v;activeFilter="Todos";document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$("#crumb").textContent=navNames[v].toUpperCase();
+function navigate(v){view=v;activeFilter="Todos";gridLimit=48;document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$("#crumb").textContent=navNames[v].toUpperCase();
  if(v==="home")renderHome();
  else if(v==="movies")renderGrid("Películas",items().filter(isMovie));
  else if(v==="series")renderGrid("Series",items().filter(isSeries));
@@ -50,9 +52,9 @@ function renderSettings(){screen.innerHTML=`<h1 class="page-title">Ajustes</h1><
 <div class="setting"><strong>Compatibilidad de reproducción</strong><span>Reproducción HTML5 para enlaces directos compatibles con el navegador VIDAA. HLS depende del soporte del firmware y del formato de origen.</span></div>
 <div class="setting"><strong>Estado del portal</strong><span>La copia webOS incluye una instantánea anónima del catálogo, pero no credenciales de usuario ni URLs de reproducción para el contenido del portal.</span></div>
 </div>`}
-function openDetail(x){if(!x)return;selected=x;let fav=favorites().includes(String(x.id));detail.innerHTML=`<button class="close" id="closeDetail">✕</button>${x.poster?`<img class="detail-poster" src="${safe(x.poster)}" onerror="this.style.opacity='.15'">`:`<div class="detail-poster"></div>`}<div class="detail-info"><div class="eyebrow">${safe(x.kind||"CONTENIDO")} · XUPERTV</div><h2>${safe(x.title)}</h2><div class="meta">${safe(x.year||"Año no disponible")}　·　${safe(x.duration||"Duración no disponible")}　·　★ ${safe(x.score||"—")}</div><div class="meta">${safe((x.genres||[]).join(" · "))}</div><p>${safe(x.synopsis||"Sinopsis no disponible en la captura del catálogo.")}</p><p class="subtle">Dirección: ${safe(x.director||"—")}<br>Reparto: ${safe(x.actors||"—")}</p><div class="actions"><button class="primary" id="playItem">${x.streamUrl?"▶ Reproducir":"▶ Ver opciones"}</button><button class="secondary" id="favItem">${fav?"♥ Quitar de favoritos":"♡ Añadir a favoritos"}</button></div></div>`;
- modal.classList.remove("hidden");$("#closeDetail").onclick=closeDetail;$("#favItem").onclick=()=>{let f=favorites(),id=String(x.id);f=f.includes(id)?f.filter(a=>a!==id):[...f,id];store.set("favorites",f);$("#favItem").textContent=f.includes(id)?"♥ Quitar de favoritos":"♡ Añadir a favoritos";toast(f.includes(id)?"Añadido a favoritos":"Eliminado de favoritos")};$("#playItem").onclick=()=>{if(x.streamUrl)play(x);else toast("Esta ficha no incluye un enlace de reproducción en los archivos recibidos.")};}
-function closeDetail(){modal.classList.add("hidden");selected=null}
+function openDetail(x){if(!x)return;lastFocus=document.activeElement;selected=x;let fav=favorites().includes(String(x.id));detail.innerHTML=`<button class="close" id="closeDetail">✕</button>${x.poster?`<img class="detail-poster" src="${safe(x.poster)}" onerror="this.style.opacity='.15'">`:`<div class="detail-poster"></div>`}<div class="detail-info"><div class="eyebrow">${safe(x.kind||"CONTENIDO")} · XUPERTV</div><h2>${safe(x.title)}</h2><div class="meta">${safe(x.year||"Año no disponible")}　·　${safe(x.duration||"Duración no disponible")}　·　★ ${safe(x.score||"—")}</div><div class="meta">${safe((x.genres||[]).join(" · "))}</div><p>${safe(x.synopsis||"Sinopsis no disponible en la captura del catálogo.")}</p><p class="subtle">Dirección: ${safe(x.director||"—")}<br>Reparto: ${safe(x.actors||"—")}</p><div class="actions"><button class="primary" id="playItem">${x.streamUrl?"▶ Reproducir":"▶ Ver opciones"}</button><button class="secondary" id="favItem">${fav?"♥ Quitar de favoritos":"♡ Añadir a favoritos"}</button></div></div>`;
+ modal.classList.remove("hidden");$("#closeDetail").onclick=closeDetail;$("#closeDetail").focus();$("#favItem").onclick=()=>{let f=favorites(),id=String(x.id);f=f.includes(id)?f.filter(a=>a!==id):[...f,id];store.set("favorites",f);$("#favItem").textContent=f.includes(id)?"♥ Quitar de favoritos":"♡ Añadir a favoritos";toast(f.includes(id)?"Añadido a favoritos":"Eliminado de favoritos")};$("#playItem").onclick=()=>{if(x.streamUrl)play(x);else toast("Esta ficha no incluye un enlace de reproducción en los archivos recibidos.")};}
+function closeDetail(){modal.classList.add("hidden");selected=null;if(lastFocus&&lastFocus.focus)lastFocus.focus()}
 function play(x){closeDetail();player.classList.remove("hidden");$("#playerTitle").textContent=x.title;$("#playerMsg").textContent="";video.src=x.streamUrl;video.play().catch(()=>$("#playerMsg").textContent="No se pudo iniciar: revisa conexión o formato.");let h=history().filter(a=>a!==String(x.id));h.unshift(String(x.id));store.set("history",h.slice(0,100))}
 function closePlayer(){video.pause();video.removeAttribute("src");video.load();player.classList.add("hidden")}
 $("#closePlayer").onclick=closePlayer;
@@ -61,12 +63,21 @@ function clock(){let d=new Date();$("#clock").textContent=d.toLocaleTimeString("
 function focusables(){return [...document.querySelectorAll("button:not(:disabled),input")].filter(x=>x.offsetParent!==null)}
 function moveFocus(dir){let els=focusables();if(!els.length)return;let cur=document.activeElement,idx=els.indexOf(cur);if(idx<0){els[0].focus();return}
  let rect=cur.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,candidates=els.map((e,i)=>{if(i===idx)return null;let r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,dx=x-cx,dy=y-cy;let primary=dir==="left"?-dx:dir==="right"?dx:dir==="up"?-dy:dy;if(primary<=0)return null;let secondary=(dir==="left"||dir==="right")?Math.abs(dy):Math.abs(dx);return {e,score:primary+secondary*2+secondary*secondary/Math.max(primary,1),primary}}).filter(Boolean).sort((a,b)=>a.score-b.score);if(candidates[0])candidates[0].e.focus()}
-document.addEventListener("keydown",e=>{if(!player.classList.contains("hidden")){if(e.key==="Escape"||e.key==="Backspace"){e.preventDefault();closePlayer()}return}
- if(!modal.classList.contains("hidden")){if(e.key==="Escape"||e.key==="Backspace"){e.preventDefault();closeDetail()}return}
- const map={ArrowLeft:"left",ArrowRight:"right",ArrowUp:"up",ArrowDown:"down"};if(map[e.key]){e.preventDefault();moveFocus(map[e.key])}
- else if(e.key==="Escape"||e.key==="Backspace"){e.preventDefault();if(view!=="home")navigate("home")}
- else if(e.key==="Enter"&&document.activeElement?.tagName==="BUTTON"){e.preventDefault();document.activeElement.click()}
+document.addEventListener("keydown",e=>{
+ const code=e.keyCode||e.which||0;
+ const key=e.key||"";
+ const back=(key==="Escape"||key==="Backspace"||key==="BrowserBack"||code===8||code===27||code===10009||code===461);
+ if(!player.classList.contains("hidden")){if(back){e.preventDefault();closePlayer()}return}
+ if(!modal.classList.contains("hidden")){if(back){e.preventDefault();closeDetail()}return}
+ const map={ArrowLeft:"left",ArrowRight:"right",ArrowUp:"up",ArrowDown:"down",Left:"left",Right:"right",Up:"up",Down:"down"};
+ const dir=map[key]||(code===37?"left":code===39?"right":code===38?"up":code===40?"down":null);
+ if(dir){e.preventDefault();moveFocus(dir)}
+ else if(back){e.preventDefault();if(view!=="home")navigate("home")}
+ else if((key==="Enter"||code===13)&&document.activeElement&&document.activeElement.tagName==="BUTTON"){e.preventDefault();document.activeElement.click()}
 });
+document.addEventListener("focusin",e=>{const el=e.target;if(el&&el.scrollIntoView){try{el.scrollIntoView({block:"nearest",inline:"nearest"})}catch(_){}}});
+video.addEventListener("error",()=>{if(!player.classList.contains("hidden"))$("#playerMsg").textContent="Formato o enlace no compatible con este televisor."});
+
 $("#nav").addEventListener("click",e=>{let b=e.target.closest("[data-view]");if(b)navigate(b.dataset.view)});
 window.addEventListener("load",()=>{fetch("data/catalog.json").then(r=>r.json()).then(d=>{catalog=d;navigate("home")}).catch(()=>{screen.innerHTML='<div class="empty">No se pudo cargar el catálogo local.</div>'})});
 setInterval(clock,1000);clock();

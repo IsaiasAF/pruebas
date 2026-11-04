@@ -1,10 +1,12 @@
 {
   "name": "XuperTV",
   "id": "com.xuper.tv.vidaa",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "platform": "VIDAA HTML5",
   "entry": "index.html",
   "resolution": "1920x1080",
   "content_items": 638,
-  "package_type": "hosted-web-app-source"
+  "package_type": "hosted-web-app-source",
+  "target_device": "Hisense 50A65NV / VIDAA U9",
+  "notes": "Optimización de navegación por control remoto y renderizado incremental"
 }
