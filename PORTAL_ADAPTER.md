@@ -1,32 +1,35 @@
 # Adaptador de portal para VIDAA
 
-La aplicación VIDAA es HTML5 de navegador. No puede ejecutar los módulos Node.js usados por el cliente webOS (`crypto`, `https`, `dns`, `net`) ni añadir cabeceras arbitrarias al elemento HTML `<video>`. Por eso la integración se divide en dos partes:
+La aplicación VIDAA es HTML5 de navegador. No puede ejecutar los módulos Node.js del cliente webOS (`crypto`, `https`, `dns`, `net`) ni adjuntar cabeceras privadas al elemento HTML `<video>`. La integración se divide en:
 
-- **VIDAA (`app.js`)**: interfaz, configuración HTTPS, petición de resolución y reproducción de la URL devuelta.
-- **Servicio Node propio**: sesión autorizada, solicitudes al portal, cifrado, selección de pista y proxy de reproducción.
+- **VIDAA (`app.js`)**: interfaz, configuración de la URL HTTPS del servicio y reproducción.
+- **Servicio Node (`backend/`)**: sesión del portal, solicitudes cifradas, resolución de pistas y proxy de reproducción.
 
 ## Configuración
 
-En XuperTV abre **Ajustes → Servicio XuperTV**, introduce la URL HTTPS del servicio y pulsa **Guardar y probar**.
+1. Despliega `backend/` en un servicio Node.js persistente con Node 18 o superior.
+2. Configura las variables de entorno `PORTAL_USER_ID` y `PORTAL_USER_TOKEN` en el panel privado del proveedor. No las guardes en archivos públicos.
+3. En XuperTV abre **Ajustes → Servicio XuperTV**, introduce la URL HTTPS del servicio y pulsa **Guardar y probar**.
 
-## Contrato HTTP
+## Endpoints
 
-Todos los endpoints devuelven JSON y deben habilitar CORS para el origen de la aplicación VIDAA.
+- `GET /api/health`: estado básico del servicio.
+- `GET /api/detail?id=CONTENT_ID`: ficha, episodios y temporadas.
+- `GET /api/resolve?id=CONTENT_ID&seriesId=SERIES_ID`: resuelve la pista y devuelve una URL del proxy.
+- `GET /proxy/:key?u=...`: retransmite el medio aplicando las cabeceras de autorización del portal.
 
-- `GET /api/health` → `{"ok":true,"version":"1.0"}`
-- `GET /api/detail?id=CONTENT_ID` → detalle y episodios autorizados.
-- `GET /api/resolve?id=CONTENT_ID&seriesId=SERIES_ID` → `{"url":"https://.../playback-proxy/..." }`
+El backend mantiene las cabeceras privadas en el servidor. El proxy limita el destino al mismo host CDN que devolvió el portal y reescribe las referencias de las listas HLS. Las URLs temporales de reproducción se guardan en memoria durante 30 minutos.
 
-**Importante:** el resolver webOS obtiene pistas y cabeceras de autorización (`Content-Auth`, `Content-License`, etc.). El navegador VIDAA no puede adjuntar esas cabeceras al `<video>`; por tanto, `/api/resolve` debe devolver una URL HTTPS de proxy de reproducción que aplique las cabeceras del portal en el servidor y retransmita el contenido compatible con el televisor. No devuelvas una URL CDN protegida directamente si requiere esas cabeceras.
+## Seguridad y compatibilidad
 
-## Autenticación y seguridad
+- Usa HTTPS en el servicio y valida certificados TLS; no desactives `rejectUnauthorized`.
+- Mantén credenciales únicamente en variables de entorno privadas.
+- El servicio debe permanecer activo: GitHub Pages solo publica la interfaz estática y GitHub Actions no mantiene un proceso Node permanente.
+- El reproductor VIDAA debe aceptar el formato devuelto (MP4/H.264 o HLS según firmware). El soporte HLS varía por modelo.
+- Las credenciales de sesión pueden caducar; si el portal las rechaza, habrá que renovarlas mediante un método de autenticación autorizado.
 
-El servicio debe crear y renovar una sesión propia mediante un método de acceso autorizado por el proveedor. No debe importar sesiones, `userToken` ni credenciales compartidas de repositorios públicos. Mantén claves y tokens exclusivamente en el servidor; nunca los incluyas en `app.js`, en el catálogo o en respuestas al navegador.
+## Estado y límites
 
-## Compatibilidad VIDAA
+El repositorio contiene ahora el cliente Node y la API HTTP, pero eso no demuestra que el portal acepte la sesión ni que cada CDN/firmware sea compatible. Hace falta desplegar el backend en un host persistente y probar `/api/health`, `/api/detail` y una reproducción real desde el televisor.
 
-Prioriza MP4/H.264 cuando exista una pista compatible. HLS depende de la versión del firmware. El proxy debe gestionar redirecciones, errores de sesión, expiración de URLs y solicitudes de rango HTTP (`Range` / `206 Partial Content`) para permitir búsqueda dentro del vídeo.
-
-## Estado actual
-
-La interfaz ya permite guardar y probar una URL HTTPS y llama a `/api/resolve` cuando una ficha no tiene `streamUrl`. Este repositorio todavía no contiene el servicio Node ni una implementación de autenticación del portal; sin ese servicio no se generan enlaces reproducibles.
+GitHub Pages publica únicamente `index.html`, `app.js`, `style.css`, `assets/` y `data/`; no publica el código del backend como parte del sitio web.
