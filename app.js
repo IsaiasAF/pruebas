@@ -20,7 +20,7 @@ const portalApi={
 
 const isMovie=x=>/pel[ií]cula|movie/i.test((x.kind||"")+" "+(x.type||""));
 const isSeries=x=>/serie|series|teleplay/i.test((x.kind||"")+" "+(x.type||""));
-const navNames={home:"Inicio",live:"TV en vivo",movies:"Películas",series:"Series",kids:"Infantil",anime:"Anime",favorites:"Favoritos",history:"Historial",search:"Buscar",settings:"Ajustes"};
+const navNames={home:"Inicio",live:"TV en vivo",movies:"Películas",series:"Series",kids:"Infantil",anime:"Anime",favorites:"Favoritos",history:"Historial",search:"Buscar",settings:"Ajustes",admin:"Administrador"};
 function poster(x){let src=x.poster||x.landscape||x.backdrop||"";return src?`<img loading="lazy" src="${safe(src)}" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<div class=\\'fallback\\'>${safe(x.title)}</div>')">`:`<div class="fallback">${safe(x.title)}</div>`}
 function card(x){return `<button class="poster" data-id="${safe(x.id)}" aria-label="${safe(x.title)}">${poster(x)}<span class="label">${safe(x.year&&x.year!=="—"?x.year:x.kind||"XuperTV")}</span></button>`}
 function row(title,list,tag){if(!list.length)return"";return `<div class="section-head"><h2>${safe(title)}</h2><small>${list.length} títulos</small></div><div class="row-scroll">${list.slice(0,30).map(card).join("")}</div>`}
@@ -122,7 +122,7 @@ document.addEventListener("keydown",e=>{
 document.addEventListener("focusin",e=>{const el=e.target;if(el&&el.scrollIntoView){try{el.scrollIntoView({block:"nearest",inline:"nearest"})}catch(_){}}});
 video.addEventListener("error",()=>{if(!player.classList.contains("hidden"))$("#playerMsg").textContent="Formato o enlace no compatible con este televisor."});
 
-$("#nav").addEventListener("click",e=>{let b=e.target.closest("[data-view]");if(b)navigate(b.dataset.view)});
+$("#nav").addEventListener("click",e=>{let b=e.target;while(b&&b!==e.currentTarget&&!b.dataset.view)b=b.parentNode;if(b&&b.dataset&&b.dataset.view)navigate(b.dataset.view)});
 window.addEventListener("load",()=>{fetch("data/catalog.json").then(r=>r.json()).then(d=>{catalog=d;navigate("home")}).catch(()=>{screen.innerHTML='<div class="empty">No se pudo cargar el catálogo local.</div>'})});
 setInterval(clock,1000);clock();
 })();
