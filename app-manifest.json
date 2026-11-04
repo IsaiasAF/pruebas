@@ -1,0 +1,10 @@
+{
+  "name": "XuperTV",
+  "id": "com.xuper.tv.vidaa",
+  "version": "1.0.0",
+  "platform": "VIDAA HTML5",
+  "entry": "index.html",
+  "resolution": "1920x1080",
+  "content_items": 638,
+  "package_type": "hosted-web-app-source"
+}

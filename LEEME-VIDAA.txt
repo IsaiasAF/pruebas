@@ -1,0 +1,38 @@
+XuperTV para VIDAA — paquete HTML5 (build 1.0.0)
+
+CONTENIDO
+- index.html, style.css, app.js: aplicación HTML5 para TV.
+- data/catalog.json: catálogo combinado de las dos aplicaciones entregadas.
+- assets/: recursos gráficos extraídos de Roku y webOS.
+
+INTEGRACIÓN REALIZADA
+- Se combinaron 610 registros de la instantánea webOS + 28 registros del catálogo webOS local.
+- Se conservaron pósters, sinopsis, metadatos y filas/categorías disponibles.
+- Se integraron identidad visual y recursos de Roku.
+- Se implementaron navegación por D-pad/OK/Back, búsqueda, filtros, ficha de contenido,
+  favoritos, historial y reproductor HTML5 para los títulos que sí incluyen streamUrl.
+
+LÍMITES DETECTADOS EN LOS ARCHIVOS DE ORIGEN
+- Los 610 registros de la instantánea del portal tienen streamUrl vacío.
+- La sesión del portal webOS no tiene userId, userToken ni portalCode.
+- La sección Roku de TV en vivo tiene lógica de conexión, pero este ZIP no contiene
+  una lista de canales con URLs activas ni una sesión de servicio configurada.
+- Por ello no se fabricaron canales ni enlaces de reproducción. Se incluyen las
+  muestras abiertas de dominio público que sí tenían URL de video en catalog.js.
+
+VIDAA / INSTALACIÓN
+Este ZIP es el paquete fuente web HTML5, no un paquete firmado listo para instalar
+desde USB ni un IPK de webOS. VIDAA distribuye apps mediante su proceso de partner/
+certificación y las aplicaciones hosted HTML5 se sirven desde una URL HTTPS.
+Para una prueba en TV compatible, publica el contenido de esta carpeta en un servidor
+HTTPS y ábrelo desde el navegador de la TV; la instalación como tile/sideload requiere
+las herramientas y credenciales de desarrollador VIDAA que correspondan al modelo/
+firmware. No se puede generar una firma oficial VIDAA sin esas credenciales.
+
+PRUEBA LOCAL
+Desde esta carpeta ejecuta un servidor HTTP (por ejemplo: python -m http.server 8080)
+y abre http://localhost:8080. Para TV, usa HTTPS y una IP/dominio accesible desde la red.
+
+NOTA
+La app utiliza imágenes remotas del catálogo cuando así venían en la instantánea;
+para mostrarlas, la TV debe tener internet y el servidor de imágenes debe seguir activo.
