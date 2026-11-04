@@ -62,28 +62,10 @@ function renderLive(){screen.innerHTML=`<h1 class="page-title">TV en vivo</h1><d
 
 function renderAdmin(){
  if(!adminUnlocked){
-  screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-card"><h2>Acceso de administrador</h2><p class="subtle">Ingresa tus credenciales para administrar el catálogo.</p><form id="adminLogin" class="admin-form"><label>Usuario<input id="adminUser" class="searchbox" autocomplete="username" value="admin" required></label><label>Contraseña<input id="adminPass" class="searchbox" type="password" autocomplete="current-password" placeholder="Contraseña" required></label><button class="primary" type="submit">Iniciar sesión</button><div id="adminError" class="admin-error"></div></form></div>';
-  $("#adminLogin").onsubmit=e=>{e.preventDefault();if($("#adminUser").value.trim()==="admin"&&$("#adminPass").value===adminPassword()){adminUnlocked=true;renderAdmin()}else $("#adminError").textContent="Usuario o contraseña incorrectos."};
-  return;
- }
- const own=store.get("admin_items"), all=items();
- const filtered=all.filter(x=>(String(x.title||"")+" "+String(x.id||"")+" "+String(x.kind||"")+" "+String(x.category||"")).toLocaleLowerCase().includes(adminListQuery.toLocaleLowerCase())).slice(0,120);
- const editing=adminEditingId?all.find(x=>String(x.id)===String(adminEditingId)):null;
- const editForm=editing?'<div class="admin-card" id="adminEditor"><h2>Editar: '+safe(editing.title)+'</h2><form id="editContent" class="admin-form admin-grid">'+
- '<label>Título<input id="eTitle" class="searchbox" required maxlength="160"></label>'+
- '<label>Tipo<select id="eType" class="searchbox"><option value="movie">Película</option><option value="series">Serie</option><option value="infantil">Infantil</option><option value="anime">Anime</option><option value="other">Otro</option></select></label>'+
- '<label>Categoría<input id="eCategory" class="searchbox"></label><label>Año<input id="eYear" class="searchbox"></label>'+
- '<label>Géneros (separados por coma)<input id="eGenres" class="searchbox"></label>'+
- '<label>URL del póster<input id="ePoster" class="searchbox" type="url"></label>'+
- '<label>URL de imagen horizontal<input id="eLandscape" class="searchbox" type="url"></label>'+
- '<label>URL de fondo<input id="eBackdrop" class="searchbox" type="url"></label>'+
- '<label class="wide">URL de video / reproducción<input id="eStream" class="searchbox" type="url" placeholder="https://..."></label>'+
- '<label>Duración<input id="eDuration" class="searchbox"></label><label>Calificación<input id="eScore" class="searchbox"></label>'+
- '<label>Director<input id="eDirector" class="searchbox"></label><label>Reparto<input id="eActors" class="searchbox"></label>'+
- '<label class="wide">Sinopsis<textarea id="eSynopsis" class="searchbox" rows="4" maxlength="3000"></textarea></label>'+
- '<div class="wide actions"><button class="primary" type="submit">Guardar cambios</button><button class="secondary" type="button" id="cancelEdit">Cancelar</button></div></form></div>':'';
- screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-top"><p class="subtle">Gestiona cualquier ficha del catálogo y los enlaces de reproducción.</p><button class="secondary" id="adminLogout">Cerrar sesión</button></div>'+
- '<div class="admin-card"><h2>Agregar contenido</h2><form id="addContent" class="admin-form admin-grid">'+
+  screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-top"><p class="subtle">Gestiona películas, series y el resto del catálogo.</p><button class="secondary" id="adminLogout">Cerrar sesión</button></div>'+
+ '<div class="admin-card"><h2>Editar contenido existente</h2><p class="admin-note">Busca cualquier título del catálogo y pulsa el botón EDITAR. Puedes cambiar su información, imágenes y video.</p><input id="adminCatalogSearch" class="searchbox" placeholder="Buscar película o serie por nombre..." value="'+safe(adminListQuery)+'"><p class="admin-note">Coincidencias: '+filtered.length+' de '+all.length+'</p>'+
+ (filtered.length?filtered.map(x=>'<div class="admin-entry"><span>'+safe(x.title)+' <small>'+safe(x.kind||x.category||"contenido")+'</small></span><button class="primary" data-edit-admin="'+safe(x.id)+'">EDITAR</button></div>').join(""):'<p class="subtle">No hay coincidencias. Prueba otro nombre.</p>')+'</div>'+editForm+
+ '<div class="admin-card"><h2>Agregar contenido nuevo</h2><form id="addContent" class="admin-form admin-grid">'+
  '<label>Nombre del contenido<input id="cTitle" class="searchbox" required maxlength="120" placeholder="Título"></label>'+
  '<label>Tipo<select id="cType" class="searchbox"><option value="movie">Película</option><option value="series">Serie</option><option value="infantil">Infantil</option><option value="anime">Anime</option></select></label>'+
  '<label>Año<input id="cYear" class="searchbox" inputmode="numeric" maxlength="4" placeholder="2026"></label>'+
@@ -92,10 +74,8 @@ function renderAdmin(){
  '<label>URL de reproducción<input id="cStream" class="searchbox" type="url" placeholder="https://..."></label>'+
  '<label class="wide">Sinopsis<textarea id="cSynopsis" class="searchbox" rows="3" maxlength="1000" placeholder="Descripción del contenido"></textarea></label>'+
  '<div class="wide"><button class="primary" type="submit">Guardar contenido</button></div></form>'+
- '<p class="admin-note">Los cambios se guardan localmente en este dispositivo. Los enlaces deben ser accesibles desde VIDAA.</p></div>'+
- '<div class="admin-card"><h2>Editar contenido del catálogo ('+all.length+')</h2><input id="adminCatalogSearch" class="searchbox" placeholder="Buscar por título, ID o categoría..." value="'+safe(adminListQuery)+'"><p class="admin-note">Mostrando '+filtered.length+' resultados (máximo 120 por búsqueda). Selecciona Editar para cambiar ficha, imágenes o video.</p>'+
- (filtered.length?filtered.map(x=>'<div class="admin-entry"><span>'+safe(x.title)+' <small>'+safe(x.kind||x.category||"contenido")+'</small></span><button class="secondary" data-edit-admin="'+safe(x.id)+'">Editar</button></div>').join(""):'<p class="subtle">No hay coincidencias.</p>')+'</div>'+editForm+
- '<div class="admin-card"><h2>Cambiar contraseña</h2><form id="changeAdminPass" class="admin-form"><label>Nueva contraseña<input id="newAdminPass" class="searchbox" type="password" minlength="8" required placeholder="Mínimo 8 caracteres"></label><button class="secondary" type="submit">Actualizar contraseña</button></form></div>';
+ '<p class="admin-note">Los enlaces deben ser accesibles desde el televisor.</p></div>'+
+ '<div class="admin-card"><h2>Cambiar contraseña</h2><form id="changeAdminPass" class="admin-form"><label>Nueva contraseña<input id="newAdminPass" class="searchbox" type="password" minlength="8" required placeholder="Mínimo 8 caracteres"></label><button class="secondary" type="submit">Actualizar contraseña</button></form></div>'
  $("#adminLogout").onclick=()=>{adminUnlocked=false;adminEditingId=null;renderAdmin()};
  $("#adminCatalogSearch").oninput=e=>{adminListQuery=e.target.value;const pos=e.target.selectionStart;renderAdmin();const input=$("#adminCatalogSearch");input.focus();input.setSelectionRange(pos,pos)};
  document.querySelectorAll("[data-edit-admin]").forEach(b=>b.onclick=()=>{adminEditingId=b.dataset.editAdmin;renderAdmin();const ed=$("#adminEditor");if(ed)ed.scrollIntoView({block:"start"})});
