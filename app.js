@@ -12,7 +12,7 @@ const portalConfig={get(){try{return localStorage.getItem("xuper_portal_api")||"
 const portalApi={
  base(){return portalConfig.get().replace(/\/+$/,"")},
  async request(path){const base=this.base();if(!base)throw new Error("Configura la URL del servicio de portal en Ajustes.");const r=await fetch(base+path,{headers:{Accept:"application/json"}});if(!r.ok)throw new Error("Servicio de portal: HTTP "+r.status);const d=await r.json();if(d&&d.error)throw new Error(d.error);return d},
- async resolve(item){return this.request("/api/resolve?id="+encodeURIComponent(item.id)+"&seriesId="+encodeURIComponent(item.seriesId||""))},
+ async resolve(item){const d=await this.request("/api/resolve?id="+encodeURIComponent(item.id)+"&seriesId="+encodeURIComponent(item.seriesId||""));if(d&&typeof d.url==="string"&&d.url.charAt(0)==="/")d.url=this.base()+d.url;return d},
  async detail(item){return this.request("/api/detail?id="+encodeURIComponent(item.id))},
  async health(){return this.request("/api/health")}
 };
