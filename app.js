@@ -1,10 +1,10 @@
 (()=>{"use strict";
 const $=s=>document.querySelector(s), screen=$("#screen"), modal=$("#modal"), detail=$("#detail"), player=$("#player"), video=$("#video");
-let catalog={items:[]}, view="home", selected=null, activeFilter="Todos", searchTerm="", focusIndex=0, gridLimit=48, lastFocus=null, adminUnlocked=false;
+let catalog={items:[]}, view="home", selected=null, activeFilter="Todos", searchTerm="", focusIndex=0, gridLimit=48, lastFocus=null, adminUnlocked=false, adminEditingId=null, adminListQuery="";
 const store={get(k){try{return JSON.parse(localStorage.getItem("xuper_"+k)||"[]")}catch(e){return[]}},set(k,v){try{localStorage.setItem("xuper_"+k,JSON.stringify(v))}catch(e){toast("No hay espacio para guardar este cambio.")}}};
 const favorites=()=>store.get("favorites"), history=()=>store.get("history");
 const safe=(s)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const items=()=>[...(catalog.items||[]),...store.get("admin_items")];
+const items=()=>{const overrides=store.get("admin_overrides"),hidden=store.get("admin_hidden");return [...(catalog.items||[]),...store.get("admin_items")].filter(x=>!hidden.includes(String(x.id))).map(x=>Object.assign({},x,overrides[String(x.id)]||{}))};
 const adminPassword=()=>{try{return localStorage.getItem("xuper_admin_password")||"123456789"}catch(e){return "123456789"}};
 /* Cliente del adaptador de portal. El navegador VIDAA no puede ejecutar
    módulos Node (crypto/https/dns); la comunicación del portal va por un
@@ -66,8 +66,23 @@ function renderAdmin(){
   $("#adminLogin").onsubmit=e=>{e.preventDefault();if($("#adminUser").value.trim()==="admin"&&$("#adminPass").value===adminPassword()){adminUnlocked=true;renderAdmin()}else $("#adminError").textContent="Usuario o contraseña incorrectos."};
   return;
  }
- const own=store.get("admin_items");
- screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-top"><p class="subtle">Agrega películas y series al catálogo de este dispositivo.</p><button class="secondary" id="adminLogout">Cerrar sesión</button></div>'+
+ const own=store.get("admin_items"), all=items();
+ const filtered=all.filter(x=>(String(x.title||"")+" "+String(x.id||"")+" "+String(x.kind||"")+" "+String(x.category||"")).toLocaleLowerCase().includes(adminListQuery.toLocaleLowerCase())).slice(0,120);
+ const editing=adminEditingId?all.find(x=>String(x.id)===String(adminEditingId)):null;
+ const editForm=editing?'<div class="admin-card" id="adminEditor"><h2>Editar: '+safe(editing.title)+'</h2><form id="editContent" class="admin-form admin-grid">'+
+ '<label>Título<input id="eTitle" class="searchbox" required maxlength="160"></label>'+
+ '<label>Tipo<select id="eType" class="searchbox"><option value="movie">Película</option><option value="series">Serie</option><option value="infantil">Infantil</option><option value="anime">Anime</option><option value="other">Otro</option></select></label>'+
+ '<label>Categoría<input id="eCategory" class="searchbox"></label><label>Año<input id="eYear" class="searchbox"></label>'+
+ '<label>Géneros (separados por coma)<input id="eGenres" class="searchbox"></label>'+
+ '<label>URL del póster<input id="ePoster" class="searchbox" type="url"></label>'+
+ '<label>URL de imagen horizontal<input id="eLandscape" class="searchbox" type="url"></label>'+
+ '<label>URL de fondo<input id="eBackdrop" class="searchbox" type="url"></label>'+
+ '<label class="wide">URL de video / reproducción<input id="eStream" class="searchbox" type="url" placeholder="https://..."></label>'+
+ '<label>Duración<input id="eDuration" class="searchbox"></label><label>Calificación<input id="eScore" class="searchbox"></label>'+
+ '<label>Director<input id="eDirector" class="searchbox"></label><label>Reparto<input id="eActors" class="searchbox"></label>'+
+ '<label class="wide">Sinopsis<textarea id="eSynopsis" class="searchbox" rows="4" maxlength="3000"></textarea></label>'+
+ '<div class="wide actions"><button class="primary" type="submit">Guardar cambios</button><button class="secondary" type="button" id="cancelEdit">Cancelar</button></div></form></div>':'';
+ screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-top"><p class="subtle">Gestiona cualquier ficha del catálogo y los enlaces de reproducción.</p><button class="secondary" id="adminLogout">Cerrar sesión</button></div>'+
  '<div class="admin-card"><h2>Agregar contenido</h2><form id="addContent" class="admin-form admin-grid">'+
  '<label>Nombre del contenido<input id="cTitle" class="searchbox" required maxlength="120" placeholder="Título"></label>'+
  '<label>Tipo<select id="cType" class="searchbox"><option value="movie">Película</option><option value="series">Serie</option><option value="infantil">Infantil</option><option value="anime">Anime</option></select></label>'+
@@ -77,15 +92,26 @@ function renderAdmin(){
  '<label>URL de reproducción<input id="cStream" class="searchbox" type="url" placeholder="https://..."></label>'+
  '<label class="wide">Sinopsis<textarea id="cSynopsis" class="searchbox" rows="3" maxlength="1000" placeholder="Descripción del contenido"></textarea></label>'+
  '<div class="wide"><button class="primary" type="submit">Guardar contenido</button></div></form>'+
- '<p class="admin-note">Usa una URL HTTPS accesible desde el televisor. Los enlaces de portal requieren que el backend tenga resolución configurada.</p></div>'+
- '<div class="admin-card"><h2>Contenido agregado ('+own.length+')</h2>'+
- (own.length?own.map(x=>'<div class="admin-entry"><span>'+safe(x.title)+' <small>'+safe(x.kind)+'</small></span><button class="secondary" data-remove-admin="'+safe(x.id)+'">Eliminar</button></div>').join(""):'<p class="subtle">Todavía no has agregado contenido.</p>')+
- '</div><div class="admin-card"><h2>Cambiar contraseña</h2><form id="changeAdminPass" class="admin-form"><label>Nueva contraseña<input id="newAdminPass" class="searchbox" type="password" minlength="8" required placeholder="Mínimo 8 caracteres"></label><button class="secondary" type="submit">Actualizar contraseña</button></form></div>';
- $("#adminLogout").onclick=()=>{adminUnlocked=false;renderAdmin()};
+ '<p class="admin-note">Los cambios se guardan localmente en este dispositivo. Los enlaces deben ser accesibles desde VIDAA.</p></div>'+
+ '<div class="admin-card"><h2>Editar contenido del catálogo ('+all.length+')</h2><input id="adminCatalogSearch" class="searchbox" placeholder="Buscar por título, ID o categoría..." value="'+safe(adminListQuery)+'"><p class="admin-note">Mostrando '+filtered.length+' resultados (máximo 120 por búsqueda). Selecciona Editar para cambiar ficha, imágenes o video.</p>'+
+ (filtered.length?filtered.map(x=>'<div class="admin-entry"><span>'+safe(x.title)+' <small>'+safe(x.kind||x.category||"contenido")+'</small></span><button class="secondary" data-edit-admin="'+safe(x.id)+'">Editar</button></div>').join(""):'<p class="subtle">No hay coincidencias.</p>')+'</div>'+editForm+
+ '<div class="admin-card"><h2>Cambiar contraseña</h2><form id="changeAdminPass" class="admin-form"><label>Nueva contraseña<input id="newAdminPass" class="searchbox" type="password" minlength="8" required placeholder="Mínimo 8 caracteres"></label><button class="secondary" type="submit">Actualizar contraseña</button></form></div>';
+ $("#adminLogout").onclick=()=>{adminUnlocked=false;adminEditingId=null;renderAdmin()};
+ $("#adminCatalogSearch").oninput=e=>{adminListQuery=e.target.value;const pos=e.target.selectionStart;renderAdmin();const input=$("#adminCatalogSearch");input.focus();input.setSelectionRange(pos,pos)};
+ document.querySelectorAll("[data-edit-admin]").forEach(b=>b.onclick=()=>{adminEditingId=b.dataset.editAdmin;renderAdmin();const ed=$("#adminEditor");if(ed)ed.scrollIntoView({block:"start"})});
  $("#addContent").onsubmit=e=>{e.preventDefault();const title=$("#cTitle").value.trim(),type=$("#cType").value,poster=$("#cPoster").value.trim(),stream=$("#cStream").value.trim();if(!title){toast("Escribe un título.");return}if((poster&&!/^https?:\/\//i.test(poster))||(stream&&!/^https?:\/\//i.test(stream))){toast("Las direcciones deben comenzar con http:// o https://.");return}
  const kind=type==="movie"?"película":type==="series"?"serie":type;
- const added=store.get("admin_items");added.push({id:"admin_"+Date.now(),title,kind,type,category:type,year:$("#cYear").value.trim()||"—",genres:$("#cGenres").value.split(",").map(x=>x.trim()).filter(Boolean),poster,streamUrl:stream,synopsis:$("#cSynopsis").value.trim(),row:"Agregado por administrador"});store.set("admin_items",added);toast("Contenido agregado.");renderAdmin();};
- document.querySelectorAll("[data-remove-admin]").forEach(b=>b.onclick=()=>{store.set("admin_items",store.get("admin_items").filter(x=>x.id!==b.dataset.removeAdmin));renderAdmin();toast("Contenido eliminado.")});
+ const added=store.get("admin_items");added.push({id:"admin_"+Date.now(),title,kind,type,category:type,year:$("#cYear").value.trim()||"—",genres:$("#cGenres").value.split(",").map(x=>x.trim()).filter(Boolean),poster,streamUrl:stream,synopsis:$("#cSynopsis").value.trim(),row:"Agregado por administrador"});store.set("admin_items",added);toast("Contenido agregado.");adminListQuery=title;renderAdmin();};
+ if(editing){
+  const val=(id,v)=>{const el=$(id);if(el)el.value=v==null?"":String(v)};
+  val("#eTitle",editing.title);val("#eType",editing.kind==="infantil"||editing.kind==="anime"?editing.kind:(editing.type||(/serie/i.test(editing.kind||"")?"series":/pel[ií]cula/i.test(editing.kind||"")?"movie":"other")));val("#eCategory",editing.category);val("#eYear",editing.year);val("#eGenres",(editing.genres||[]).join(", "));val("#ePoster",editing.poster);val("#eLandscape",editing.landscape);val("#eBackdrop",editing.backdrop);val("#eStream",editing.streamUrl);val("#eDuration",editing.duration);val("#eScore",editing.score);val("#eDirector",editing.director);val("#eActors",editing.actors);val("#eSynopsis",editing.synopsis);
+  $("#cancelEdit").onclick=()=>{adminEditingId=null;renderAdmin()};
+  $("#editContent").onsubmit=e=>{e.preventDefault();const urls=["#ePoster","#eLandscape","#eBackdrop","#eStream"].map(id=>$(id).value.trim());if(urls.some(u=>u&&!/^https?:\/\//i.test(u))){toast("Todas las URL deben comenzar con http:// o https://.");return}
+   const type=$("#eType").value,kind=type==="movie"?"película":type==="series"?"serie":type==="other"?(editing.kind||"contenido"):type;
+   const patch={title:$("#eTitle").value.trim(),type:type==="other"?(editing.type||"other"):type,kind,category:$("#eCategory").value.trim()||type,year:$("#eYear").value.trim(),genres:$("#eGenres").value.split(",").map(x=>x.trim()).filter(Boolean),poster:urls[0],landscape:urls[1],backdrop:urls[2],streamUrl:urls[3],duration:$("#eDuration").value.trim(),score:$("#eScore").value.trim(),director:$("#eDirector").value.trim(),actors:$("#eActors").value.trim(),synopsis:$("#eSynopsis").value.trim()};
+   const overrides=store.get("admin_overrides");overrides[String(editing.id)]=patch;store.set("admin_overrides",overrides);toast("Ficha actualizada.");adminEditingId=null;renderAdmin();
+  };
+ }
  $("#changeAdminPass").onsubmit=e=>{e.preventDefault();const p=$("#newAdminPass").value;if(p.length<8){toast("Usa al menos 8 caracteres.");return}try{localStorage.setItem("xuper_admin_password",p);toast("Contraseña actualizada en este dispositivo.");$("#newAdminPass").value=""}catch(_){toast("No se pudo guardar la contraseña.")}};
 }
 
