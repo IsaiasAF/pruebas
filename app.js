@@ -4,7 +4,8 @@ let catalog={items:[]}, view="home", selected=null, activeFilter="Todos", search
 const store={get(k){try{return JSON.parse(localStorage.getItem("xuper_"+k)||"[]")}catch(e){return[]}},set(k,v){try{localStorage.setItem("xuper_"+k,JSON.stringify(v))}catch(e){toast("No hay espacio para guardar este cambio.")}}};
 const favorites=()=>store.get("favorites"), history=()=>store.get("history");
 const safe=(s)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const items=()=>{const overrides=store.get("admin_overrides"),hidden=store.get("admin_hidden");return [...(catalog.items||[]),...store.get("admin_items")].filter(x=>!hidden.includes(String(x.id))).map(x=>Object.assign({},x,overrides[String(x.id)]||{}))};
+const readAdminOverrides=()=>{try{const value=JSON.parse(localStorage.getItem("xuper_admin_overrides")||"{}");return value&&!Array.isArray(value)&&typeof value==="object"?value:{}}catch(e){return {}}};
+const items=()=>{const overrides=readAdminOverrides(),hidden=store.get("admin_hidden");return [...(catalog.items||[]),...store.get("admin_items")].filter(x=>!hidden.includes(String(x.id))).map(x=>Object.assign({},x,overrides[String(x.id)]||{}))};
 const adminPassword=()=>{try{return localStorage.getItem("xuper_admin_password")||"123456789"}catch(e){return "123456789"}};
 /* Cliente del adaptador de portal. El navegador VIDAA no puede ejecutar
    módulos Node (crypto/https/dns); la comunicación del portal va por un
@@ -103,7 +104,7 @@ function renderAdmin(){
   $("#editContent").onsubmit=e=>{e.preventDefault();const urls=["#ePoster","#eLandscape","#eBackdrop","#eStream"].map(id=>$(id).value.trim());if(urls.some(u=>u&&!/^https?:\/\//i.test(u))){toast("Las URL deben comenzar con http:// o https://.");return}
    const type=$("#eType").value,kind=type==="movie"?"película":type==="series"?"serie":type==="other"?(editing.kind||"contenido"):type;
    const patch={title:$("#eTitle").value.trim(),type:type==="other"?(editing.type||"other"):type,kind,category:$("#eCategory").value.trim()||type,year:$("#eYear").value.trim(),genres:$("#eGenres").value.split(",").map(x=>x.trim()).filter(Boolean),poster:urls[0],landscape:urls[1],backdrop:urls[2],streamUrl:urls[3],duration:$("#eDuration").value.trim(),score:$("#eScore").value.trim(),director:$("#eDirector").value.trim(),actors:$("#eActors").value.trim(),synopsis:$("#eSynopsis").value.trim()};
-   const overrides=store.get("admin_overrides");overrides[String(editing.id)]=patch;store.set("admin_overrides",overrides);toast("Ficha actualizada en este dispositivo.");adminEditingId=null;renderAdmin();
+   const overrides=readAdminOverrides();overrides[String(editing.id)]=patch;try{localStorage.setItem("xuper_admin_overrides",JSON.stringify(overrides));const check=JSON.parse(localStorage.getItem("xuper_admin_overrides")||"{}");if(!check[String(editing.id)]||check[String(editing.id)].title!==patch.title||check[String(editing.id)].streamUrl!==patch.streamUrl)throw new Error("No se pudo verificar el guardado");toast("Cambios guardados correctamente en este dispositivo.");adminEditingId=null;renderAdmin()}catch(err){toast("No se pudieron guardar los cambios. Revisa el almacenamiento disponible.")}
   };
  }
  $("#changeAdminPass").onsubmit=e=>{e.preventDefault();const p=$("#newAdminPass").value;if(p.length<8){toast("Usa al menos 8 caracteres.");return}try{localStorage.setItem("xuper_admin_password",p);toast("Contraseña actualizada.");$("#newAdminPass").value=""}catch(_){toast("No se pudo guardar la contraseña.")}};
