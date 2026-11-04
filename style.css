@@ -21,3 +21,9 @@ button:focus-visible,input:focus-visible{outline:3px solid #49d0ff;outline-offse
 .admin-entry{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #ffffff12}
 .admin-entry small{color:#8fa0b8;margin-left:8px}
 @media(max-width:800px){.admin-grid{grid-template-columns:1fr}.admin-grid .wide{grid-column:auto}}
+
+/* Panel de administración: scroll independiente para listas largas */
+#screen{height:calc(100vh - 66px);overflow-y:auto;overflow-x:hidden;padding-bottom:36px;scrollbar-width:thin}
+.admin-card{max-width:100%;overflow:visible}
+.admin-entry{min-height:54px}
+.admin-entry .primary{min-width:110px}
