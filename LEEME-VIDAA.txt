@@ -1,24 +1,29 @@
-XuperTV para Hisense VIDAA U9 — versión 1.0.1
+XuperTV para Hisense VIDAA U9 — versión 1.1.0 (pruebas)
 
 OBJETIVO
-Fuente de aplicación web HTML5 preparada para pruebas en televisores Hisense VIDAA, con perfil visual 1920x1080 y controles remotos direccionales.
+Fuente HTML5 alojada para probar interfaz y navegación en televisores Hisense VIDAA. Esta versión añade diagnóstico de capacidades del navegador para orientar las siguientes adaptaciones.
 
-OPTIMIZACIONES PARA EL HISENSE 50A65NV
-- Navegación con flechas, OK/Enter y regreso (incluye códigos de tecla Back comunes en VIDAA).
-- Catálogos grandes cargados por bloques de 48 fichas para reducir el trabajo inicial de renderizado.
-- Imágenes con carga diferida; favoritos e historial locales.
-- Interfaz 16:9, con distribución adaptable y foco visible para control remoto.
-
-CONTENIDO
-- 638 fichas combinadas de las fuentes Roku y webOS.
-- La captura de catálogo no contiene enlaces de reproducción para la mayoría de las fichas.
-- Los proyectos recibidos no proporcionaron una lista de canales en vivo ni credenciales de portal. Por eso no se inventan canales ni enlaces.
-- La reproducción HTML5 solo funcionará con URLs reales y formatos/servidores compatibles con el firmware.
-
-PRUEBA
-1. Publica esta carpeta en un servidor HTTP/HTTPS accesible desde la TV. Para probar en una red local puedes iniciar `python -m http.server 8080` desde esta carpeta y usar la IP de tu PC:8080.
-2. En el navegador de la TV, si el firmware conserva el modo de desarrollador web, abre `hisense://debug` e introduce la URL de la aplicación. La disponibilidad y el flujo exacto dependen de la versión de firmware/región; no es un instalador USB ni una certificación para VIDAA Store.
-3. Comprueba flechas, OK, regreso, scroll del catálogo, búsqueda y reproducción de una URL de prueba compatible.
+CAMBIOS 1.1.0
+- Añade vidaa-bridge.js, un puente pequeño de diagnóstico sin dependencias.
+- Muestra en Ajustes la plataforma detectada, tamaño de pantalla y soporte declarado por el navegador para MP4, HLS, DASH y almacenamiento local.
+- Añade callbacks opcionales Hisense_onAppShow / Hisense_onAppHide sin reemplazar funciones existentes.
+- Conserva el prototipo y la navegación con flechas, OK y regreso.
 
 IMPORTANTE
-Esta entrega es una aplicación web alojada para pruebas, no un paquete VIDAA firmado. No puedo garantizar la instalación como app del launcher hasta validar el firmware concreto del televisor y el método de despliegue habilitado en él. La versión VIDAA U9 y el modelo 50A65NV orientan el diseño, pero el navegador/firmware puede variar.
+- La detección canPlayType() es orientativa: no garantiza que una URL real se reproduzca. CORS, cabeceras, códecs, DRM, licencias y servidor pueden impedirlo.
+- La mayoría de fichas del catálogo son metadatos locales y no tienen enlaces de reproducción. No se inventan canales ni URLs.
+- El servicio Luna/Node, proxy y FFmpeg de webOS no se ejecutan dentro de una página VIDAA; necesitan una arquitectura compatible aparte.
+- Esta carpeta es una aplicación web alojada para pruebas, no un paquete VIDAA firmado ni una instalación en el launcher.
+- No incluir tokens, credenciales ni sesiones compartidas. No eludir DRM, autenticación, georrestricciones ni bloqueos del proveedor.
+
+PRUEBA
+1. Abre la web publicada en el navegador de la TV.
+2. Entra en Ajustes y revisa “Compatibilidad detectada en este televisor”.
+3. Prueba flechas, OK, regreso, búsqueda, favoritos y apertura/cierre de fichas.
+4. Comparte una foto de ese bloque para ajustar las siguientes pruebas de reproducción.
+
+DISPOSITIVO OBJETIVO
+Hisense 50A65NV · VIDAA U9 · MediaTek MT9603BAATAC · firmware V000.09.60L.Q0623.
+
+CRÉDITOS Y LICENCIAS
+La adaptación conserva la atribución del proyecto XuperTV VIDAA anterior y debe mantener los avisos/licencias de los proyectos fuente y de terceros. Consulta LICENSE y THIRD_PARTY.md del proyecto original antes de redistribuir recursos.
