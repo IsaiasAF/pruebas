@@ -27,10 +27,16 @@ jobs:
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Preparar sitio
+      - name: Preparar solo la aplicación VIDAA
+        run: |
+          mkdir -p _site
+          cp index.html app.js style.css _site/
+          cp -R assets data _site/
+
+      - name: Publicar artefacto
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Publicar XuperTV
         id: deployment
