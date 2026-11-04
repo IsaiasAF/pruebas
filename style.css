@@ -5,3 +5,19 @@ button:focus-visible,input:focus-visible{outline:3px solid #49d0ff;outline-offse
 .poster img{display:block;backface-visibility:hidden}
 @media (min-width:1800px){.poster{flex-basis:160px}.grid{grid-template-columns:repeat(7,minmax(0,1fr))}}
 @media (max-height:800px){.sidebar{padding-top:16px}.brand{height:62px}.nav{padding:9px 12px;font-size:15px}.hero{height:250px}}
+
+/* Panel de administración */
+.admin-card{background:#111e32;border:1px solid #ffffff18;border-radius:12px;padding:22px;margin:18px 0;max-width:900px}
+.admin-card h2{font-size:20px;margin:0 0 16px}
+.admin-form{display:grid;gap:14px;max-width:700px}
+.admin-form label{display:grid;gap:8px;color:#c4d0e0;font-size:14px}
+.admin-form .searchbox{width:100%;font-size:16px;padding:12px}
+.admin-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:100%}
+.admin-grid .wide{grid-column:1/-1}
+.admin-form textarea{resize:vertical}
+.admin-error{color:#ff8585;min-height:18px}
+.admin-note{color:#91a1b8;font-size:12px;line-height:1.5;margin-bottom:0}
+.admin-top{display:flex;align-items:center;justify-content:space-between;max-width:900px}
+.admin-entry{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #ffffff12}
+.admin-entry small{color:#8fa0b8;margin-left:8px}
+@media(max-width:800px){.admin-grid{grid-template-columns:1fr}.admin-grid .wide{grid-column:auto}}
