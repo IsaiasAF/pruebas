@@ -1076,7 +1076,7 @@ function fetchM3u(urlStr, done) {
   var isHttps = urlStr.indexOf('https://') === 0;
   var mod = isHttps ? https : http;
   var opts = url.parse(urlStr);
-  opts.rejectUnauthorized = false;
+  opts.rejectUnauthorized = true;
   opts.method = 'GET';
   opts.headers = {
     'User-Agent': 'Mozilla/5.0 (SmartHub; SMART-TV; U; Linux/SmartTV) AppleWebKit/538.1+ (KHTML, like Gecko) Safari/538.1+'
