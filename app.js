@@ -1,10 +1,11 @@
 (()=>{"use strict";
 const $=s=>document.querySelector(s), screen=$("#screen"), modal=$("#modal"), detail=$("#detail"), player=$("#player"), video=$("#video");
-let catalog={items:[]}, view="home", selected=null, activeFilter="Todos", searchTerm="", focusIndex=0, gridLimit=48, lastFocus=null;
+let catalog={items:[]}, view="home", selected=null, activeFilter="Todos", searchTerm="", focusIndex=0, gridLimit=48, lastFocus=null, adminUnlocked=false;
 const store={get(k){try{return JSON.parse(localStorage.getItem("xuper_"+k)||"[]")}catch(e){return[]}},set(k,v){try{localStorage.setItem("xuper_"+k,JSON.stringify(v))}catch(e){toast("No hay espacio para guardar este cambio.")}}};
 const favorites=()=>store.get("favorites"), history=()=>store.get("history");
 const safe=(s)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const items=()=>catalog.items||[];
+const items=()=>[...(catalog.items||[]),...store.get("admin_items")];
+const adminPassword=()=>{try{return localStorage.getItem("xuper_admin_password")||"123456789"}catch(e){return "123456789"}};
 /* Cliente del adaptador de portal. El navegador VIDAA no puede ejecutar
    módulos Node (crypto/https/dns); la comunicación del portal va por un
    servicio HTTPS propio configurado en Ajustes. */
@@ -53,10 +54,41 @@ function navigate(v){view=v;activeFilter="Todos";gridLimit=48;document.querySele
  else if(v==="search")renderSearch();
  else if(v==="live")renderLive();
  else if(v==="settings")renderSettings();
+ else if(v==="admin")renderAdmin();
 }
 function renderSearch(){screen.innerHTML=`<h1 class="page-title">Buscar</h1><p class="subtle">Busca entre las películas, series, anime y contenido infantil del catálogo.</p><input id="searchInput" class="searchbox" type="text" placeholder="Escribe el nombre de una película o serie…" autocomplete="off"><div id="searchResults"></div>`;
  const input=$("#searchInput");input.addEventListener("input",()=>{searchTerm=input.value.trim().toLocaleLowerCase();let res=searchTerm?items().filter(x=>(x.title+" "+(x.alias||"")+" "+(x.genres||[]).join(" ")).toLocaleLowerCase().includes(searchTerm)).slice(0,120):[];$("#searchResults").innerHTML=res.length?`<div class="section-head"><h2>Resultados</h2><small>${res.length} coincidencias</small></div><div class="grid">${res.map(card).join("")}</div>`:searchTerm?`<div class="empty">No encontramos coincidencias.</div>`:"";bindCards()});}
 function renderLive(){screen.innerHTML=`<h1 class="page-title">TV en vivo</h1><div class="live-placeholder"><div class="box"><div class="eyebrow">TV EN VIVO</div><h2>La sección está preparada</h2><p>El proyecto Roku contiene la estructura de TV en vivo y el proyecto webOS contiene la integración de portal, pero los dos archivos recibidos no incluyen una lista de canales con direcciones de reproducción activas. La sesión de portal guardada tampoco contiene credenciales. No se mostrarán canales inventados ni enlaces que no estén en los archivos.</p><button class="secondary" id="backHome">Volver al inicio</button></div></div>`;$("#backHome").onclick=()=>navigate("home")}
+
+function renderAdmin(){
+ if(!adminUnlocked){
+  screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-card"><h2>Acceso de administrador</h2><p class="subtle">Ingresa tus credenciales para administrar el catálogo.</p><form id="adminLogin" class="admin-form"><label>Usuario<input id="adminUser" class="searchbox" autocomplete="username" value="admin" required></label><label>Contraseña<input id="adminPass" class="searchbox" type="password" autocomplete="current-password" placeholder="Contraseña" required></label><button class="primary" type="submit">Iniciar sesión</button><div id="adminError" class="admin-error"></div></form></div>';
+  $("#adminLogin").onsubmit=e=>{e.preventDefault();if($("#adminUser").value.trim()==="admin"&&$("#adminPass").value===adminPassword()){adminUnlocked=true;renderAdmin()}else $("#adminError").textContent="Usuario o contraseña incorrectos."};
+  return;
+ }
+ const own=store.get("admin_items");
+ screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-top"><p class="subtle">Agrega películas y series al catálogo de este dispositivo.</p><button class="secondary" id="adminLogout">Cerrar sesión</button></div>'+
+ '<div class="admin-card"><h2>Agregar contenido</h2><form id="addContent" class="admin-form admin-grid">'+
+ '<label>Nombre del contenido<input id="cTitle" class="searchbox" required maxlength="120" placeholder="Título"></label>'+
+ '<label>Tipo<select id="cType" class="searchbox"><option value="movie">Película</option><option value="series">Serie</option><option value="infantil">Infantil</option><option value="anime">Anime</option></select></label>'+
+ '<label>Año<input id="cYear" class="searchbox" inputmode="numeric" maxlength="4" placeholder="2026"></label>'+
+ '<label>Géneros<input id="cGenres" class="searchbox" placeholder="Acción, Drama, Ciencia ficción"></label>'+
+ '<label>URL del póster<input id="cPoster" class="searchbox" type="url" placeholder="https://..."></label>'+
+ '<label>URL de reproducción<input id="cStream" class="searchbox" type="url" placeholder="https://..."></label>'+
+ '<label class="wide">Sinopsis<textarea id="cSynopsis" class="searchbox" rows="3" maxlength="1000" placeholder="Descripción del contenido"></textarea></label>'+
+ '<div class="wide"><button class="primary" type="submit">Guardar contenido</button></div></form>'+
+ '<p class="admin-note">Usa una URL HTTPS accesible desde el televisor. Los enlaces de portal requieren que el backend tenga resolución configurada.</p></div>'+
+ '<div class="admin-card"><h2>Contenido agregado ('+own.length+')</h2>'+
+ (own.length?own.map(x=>'<div class="admin-entry"><span>'+safe(x.title)+' <small>'+safe(x.kind)+'</small></span><button class="secondary" data-remove-admin="'+safe(x.id)+'">Eliminar</button></div>').join(""):'<p class="subtle">Todavía no has agregado contenido.</p>')+
+ '</div><div class="admin-card"><h2>Cambiar contraseña</h2><form id="changeAdminPass" class="admin-form"><label>Nueva contraseña<input id="newAdminPass" class="searchbox" type="password" minlength="8" required placeholder="Mínimo 8 caracteres"></label><button class="secondary" type="submit">Actualizar contraseña</button></form></div>';
+ $("#adminLogout").onclick=()=>{adminUnlocked=false;renderAdmin()};
+ $("#addContent").onsubmit=e=>{e.preventDefault();const title=$("#cTitle").value.trim(),type=$("#cType").value,poster=$("#cPoster").value.trim(),stream=$("#cStream").value.trim();if(!title){toast("Escribe un título.");return}if((poster&&!/^https?:\/\//i.test(poster))||(stream&&!/^https?:\/\//i.test(stream))){toast("Las direcciones deben comenzar con http:// o https://.");return}
+ const kind=type==="movie"?"película":type==="series"?"serie":type;
+ const added=store.get("admin_items");added.push({id:"admin_"+Date.now(),title,kind,type,category:type,year:$("#cYear").value.trim()||"—",genres:$("#cGenres").value.split(",").map(x=>x.trim()).filter(Boolean),poster,streamUrl:stream,synopsis:$("#cSynopsis").value.trim(),row:"Agregado por administrador"});store.set("admin_items",added);toast("Contenido agregado.");renderAdmin();};
+ document.querySelectorAll("[data-remove-admin]").forEach(b=>b.onclick=()=>{store.set("admin_items",store.get("admin_items").filter(x=>x.id!==b.dataset.removeAdmin));renderAdmin();toast("Contenido eliminado.")});
+ $("#changeAdminPass").onsubmit=e=>{e.preventDefault();const p=$("#newAdminPass").value;if(p.length<8){toast("Usa al menos 8 caracteres.");return}try{localStorage.setItem("xuper_admin_password",p);toast("Contraseña actualizada en este dispositivo.");$("#newAdminPass").value=""}catch(_){toast("No se pudo guardar la contraseña.")}};
+}
+
 function renderSettings(){screen.innerHTML=`<h1 class="page-title">Ajustes</h1><p class="subtle">Conexión con el servicio de portal</p><div class="settings">
 <div class="setting"><strong>Servicio XuperTV</strong><span>Introduce la dirección HTTPS de tu propio adaptador Node. VIDAA ejecuta la interfaz HTML5; la autenticación, cifrado 3DES y solicitudes al portal deben ejecutarse fuera del navegador.</span><input id="portalApiUrl" class="searchbox" style="font-size:15px;margin-top:12px;width:100%" placeholder="https://tu-servidor.example" value="${safe(portalConfig.get())}"><div class="actions"><button class="primary" id="savePortalApi">Guardar y probar</button><span id="portalStatus" class="subtle"></span></div></div>
 <div class="setting"><strong>Catálogo local</strong><span>${items().length} fichas de respaldo. El servicio conectado puede resolver reproducción mediante el endpoint /api/resolve.</span></div>
