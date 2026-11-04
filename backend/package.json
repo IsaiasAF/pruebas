@@ -1,0 +1,9 @@
+{
+  "name": "xupetv-vidaa-adapter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Servicio Node.js para conectar el cliente HTML5 VIDAA con el portal XuperTV",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
