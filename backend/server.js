@@ -131,9 +131,10 @@ async function handle(req, res) {
           'Cache-Control': 'no-store',
           'Content-Type': isPlaylist ? 'application/vnd.apple.mpegurl' : (contentType || info.mime || 'application/octet-stream')
         };
-        ['content-length','content-range','accept-ranges'].forEach(k => {
+        ['content-range','accept-ranges'].forEach(k => {
           if (upstream.headers[k]) outHeaders[k] = upstream.headers[k];
         });
+        if (!isPlaylist && upstream.headers['content-length']) outHeaders['Content-Length'] = upstream.headers['content-length'];
         if (upstream.statusCode === 206) res.writeHead(206, outHeaders);
         else res.writeHead(upstream.statusCode || 502, outHeaders);
         if (isPlaylist) {
