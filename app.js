@@ -27,14 +27,10 @@ function card(x){return `<button class="poster" data-id="${safe(x.id)}" aria-lab
 function row(title,list,tag){if(!list.length)return"";return `<div class="section-head"><h2>${safe(title)}</h2><small>${list.length} títulos</small></div><div class="row-scroll">${list.slice(0,30).map(card).join("")}</div>`}
 function allRows(){let rows=[...new Set(items().map(x=>x.row).filter(Boolean))];return rows}
 function bindCards(){
- if(screen.dataset.cardClickBound==="1")return;
- screen.dataset.cardClickBound="1";
- screen.addEventListener("click",e=>{
-  let b=e.target;
-  while(b&&b!==screen&&!(b.matches&&b.matches(".poster[data-id]")))b=b.parentNode;
-  if(!b||b===screen)return;
-  const item=items().find(x=>String(x.id)===String(b.getAttribute("data-id")));
-  if(item)openDetail(item);
+ document.querySelectorAll(".poster[data-id]").forEach(b=>{
+  if(b.dataset.detailBound==="1")return;
+  b.dataset.detailBound="1";
+  b.addEventListener("click",()=>{const item=items().find(x=>String(x.id)===String(b.dataset.id));if(item)openDetail(item)});
  });
 }
 function renderHome(){
