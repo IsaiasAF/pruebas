@@ -26,7 +26,17 @@ function poster(x){let src=x.poster||x.landscape||x.backdrop||"";return src?`<im
 function card(x){return `<button class="poster" data-id="${safe(x.id)}" aria-label="${safe(x.title)}">${poster(x)}<span class="label">${safe(x.year&&x.year!=="—"?x.year:x.kind||"XuperTV")}</span></button>`}
 function row(title,list,tag){if(!list.length)return"";return `<div class="section-head"><h2>${safe(title)}</h2><small>${list.length} títulos</small></div><div class="row-scroll">${list.slice(0,30).map(card).join("")}</div>`}
 function allRows(){let rows=[...new Set(items().map(x=>x.row).filter(Boolean))];return rows}
-function bindCards(){document.querySelectorAll("[data-id]").forEach(b=>b.addEventListener("click",()=>openDetail(items().find(x=>String(x.id)===b.dataset.id))))}
+function bindCards(){
+ if(screen.dataset.cardClickBound==="1")return;
+ screen.dataset.cardClickBound="1";
+ screen.addEventListener("click",e=>{
+  let b=e.target;
+  while(b&&b!==screen&&!(b.matches&&b.matches(".poster[data-id]")))b=b.parentNode;
+  if(!b||b===screen)return;
+  const item=items().find(x=>String(x.id)===String(b.getAttribute("data-id")));
+  if(item)openDetail(item);
+ });
+}
 function renderHome(){
  const featured=items().filter(x=>x.category==="destacado").slice(0,8);
  const movies=items().filter(isMovie), series=items().filter(isSeries), kids=items().filter(x=>x.kind==="infantil"), anime=items().filter(x=>x.kind==="anime");
