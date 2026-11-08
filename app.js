@@ -61,12 +61,12 @@ function renderSearch(){screen.innerHTML=`<h1 class="page-title">Buscar</h1><p c
  const input=$("#searchInput");input.addEventListener("input",()=>{searchTerm=input.value.trim().toLocaleLowerCase();let res=searchTerm?items().filter(x=>(x.title+" "+(x.alias||"")+" "+(x.genres||[]).join(" ")).toLocaleLowerCase().includes(searchTerm)).slice(0,120):[];$("#searchResults").innerHTML=res.length?`<div class="section-head"><h2>Resultados</h2><small>${res.length} coincidencias</small></div><div class="grid">${res.map(card).join("")}</div>`:searchTerm?`<div class="empty">No encontramos coincidencias.</div>`:"";bindCards()});}
 const liveStore={get(){try{const v=JSON.parse(localStorage.getItem("xuper_live_channels")||"[]");return Array.isArray(v)?v:[]}catch(_){return[]}},set(v){try{localStorage.setItem("xuper_live_channels",JSON.stringify(v));return true}catch(_){toast("La lista es demasiado grande para el almacenamiento del televisor.");return false}}};
 function parseM3U(source){
- const lines=String(source||"").replace(/^\\uFEFF/,"").split(/\\r?\\n/),out=[];let meta=null;
+ const lines=String(source||"").replace(/^\uFEFF/,"").split(/\r?\n/),out=[];let meta=null;
  for(const raw of lines){const line=raw.trim();if(!line)continue;
   if(line.startsWith("#EXTINF:")){const comma=line.indexOf(","),attrs=comma>=0?line.slice(0,comma):line,name=comma>=0?line.slice(comma+1).trim():"Canal";
-   const attr=(key)=>{const m=attrs.match(new RegExp("(?:^|\\\\s)"+key+"=[\\"']([^\\"']*)[\\"']","i"));return m?m[1]:""};
-   meta={name: name||attr("tvg-name")||"Canal",logo:attr("tvg-logo"),group:attr("group-title")||"Otros",tvgId:attr("tvg-id")};
-  }else if(!line.startsWith("#")&&/^https?:\\/\\//i.test(line)){out.push({name:meta?.name||"Canal "+(out.length+1),logo:meta?.logo||"",group:meta?.group||"Otros",url:line});meta=null}
+   const attr=(key)=>{const m=attrs.match(new RegExp(key+"=[\"']([^\"']*)[\"']","i"));return m?m[1]:""};
+   meta={name:name||attr("tvg-name")||"Canal",logo:attr("tvg-logo"),group:attr("group-title")||"Otros",tvgId:attr("tvg-id")};
+  }else if(!line.startsWith("#")&&/^https?:\/\//i.test(line)){out.push({name:meta?.name||"Canal "+(out.length+1),logo:meta?.logo||"",group:meta?.group||"Otros",url:line});meta=null}
  }
  return out;
 }
