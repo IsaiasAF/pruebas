@@ -59,7 +59,63 @@ function navigate(v){view=v;activeFilter="Todos";gridLimit=48;document.querySele
 }
 function renderSearch(){screen.innerHTML=`<h1 class="page-title">Buscar</h1><p class="subtle">Busca entre las películas, series, anime y contenido infantil del catálogo.</p><input id="searchInput" class="searchbox" type="text" placeholder="Escribe el nombre de una película o serie…" autocomplete="off"><div id="searchResults"></div>`;
  const input=$("#searchInput");input.addEventListener("input",()=>{searchTerm=input.value.trim().toLocaleLowerCase();let res=searchTerm?items().filter(x=>(x.title+" "+(x.alias||"")+" "+(x.genres||[]).join(" ")).toLocaleLowerCase().includes(searchTerm)).slice(0,120):[];$("#searchResults").innerHTML=res.length?`<div class="section-head"><h2>Resultados</h2><small>${res.length} coincidencias</small></div><div class="grid">${res.map(card).join("")}</div>`:searchTerm?`<div class="empty">No encontramos coincidencias.</div>`:"";bindCards()});}
-function renderLive(){screen.innerHTML=`<h1 class="page-title">TV en vivo</h1><div class="live-placeholder"><div class="box"><div class="eyebrow">TV EN VIVO</div><h2>La sección está preparada</h2><p>El proyecto Roku contiene la estructura de TV en vivo y el proyecto webOS contiene la integración de portal, pero los dos archivos recibidos no incluyen una lista de canales con direcciones de reproducción activas. La sesión de portal guardada tampoco contiene credenciales. No se mostrarán canales inventados ni enlaces que no estén en los archivos.</p><button class="secondary" id="backHome">Volver al inicio</button></div></div>`;$("#backHome").onclick=()=>navigate("home")}
+function parseM3U(text){
+ const lines=String(text||"").replace(/^\uFEFF/,"").split(/\r?\n/),channels=[];let meta=null;
+ for(const raw of lines){
+  const line=raw.trim();if(!line)continue;
+  if(line.indexOf("#EXTINF:")===0){
+   const comma=line.indexOf(","),header=comma>=0?line.slice(0,comma):line;
+   const attr=key=>{const match=header.match(new RegExp("(?:^|\\s)"+key+"=[\"']([^\"']*)[\"']","i"));return match?match[1]:""};
+   meta={name:comma>=0?line.slice(comma+1).trim():"",logo:attr("tvg-logo"),group:attr("group-title")||"Otros"};
+  }else if(line.charAt(0)!=="#"&&/^https?:\/\//i.test(line)){
+   channels.push({name:meta&&meta.name?meta.name:"Canal "+(channels.length+1),logo:meta&&meta.logo?meta.logo:"",group:meta&&meta.group?meta.group:"Otros",url:line});meta=null;
+  }
+ }
+ return channels;
+}
+function renderLive(){
+ let channels=[];try{const saved=JSON.parse(localStorage.getItem("xuper_live_channels")||"[]");if(Array.isArray(saved))channels=saved}catch(e){}
+ const groups=["Todos"];channels.forEach(c=>{const g=c.group||"Otros";if(!groups.includes(g))groups.push(g)});
+ screen.innerHTML='<h1 class="page-title">TV en vivo</h1>'+
+ '<div class="admin-card" style="max-width:100%"><div class="eyebrow">LISTA PERSONAL DE CANALES</div><h2 style="margin:10px 0">Agregar lista M3U / M3U8</h2>'+
+ '<p class="subtle" style="line-height:1.5">Puedes seleccionar un archivo de tu computadora o memoria USB, o pegar la dirección web de una lista. La lista se guarda en este dispositivo.</p>'+
+ '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0">'+
+ '<label for="liveFile" class="primary" style="display:inline-block;cursor:pointer">Seleccionar archivo M3U</label><input id="liveFile" type="file" accept=".m3u,.m3u8,audio/x-mpegurl,application/vnd.apple.mpegurl,text/plain" hidden>'+
+ '<input id="liveUrl" class="searchbox" type="url" placeholder="https://servidor/lista.m3u" style="flex:1;min-width:220px;width:auto;font-size:15px;padding:12px">'+
+ '<button id="loadLiveUrl" class="secondary">Cargar URL</button>'+
+ (channels.length?'<button id="clearLive" class="secondary">Eliminar lista</button>':'')+'</div>'+
+ '<div id="liveStatus" class="admin-note">'+(channels.length?channels.length+' canales guardados en este dispositivo.':'Todavía no has agregado una lista.')+'</div></div>'+
+ (channels.length?'<div class="section-head"><h2>Canales</h2><small>'+channels.length+' disponibles</small></div>'+
+ '<input id="liveSearch" class="searchbox" type="search" placeholder="Buscar canal..." style="font-size:15px;padding:12px">'+
+ '<div id="liveGroups" class="filterbar">'+groups.map((g,i)=>'<button class="chip '+(i===0?'active':'')+'" data-live-group="'+safe(g)+'">'+safe(g)+'</button>').join("")+'</div>'+
+ '<div id="liveChannels" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px;padding-bottom:30px"></div>':
+ '<div class="empty" style="margin-top:18px">Cuando cargues una lista, los canales aparecerán aquí organizados por categoría.</div>');
+ const status=$("#liveStatus");
+ let activeGroup="Todos";
+ function showChannels(){
+  const term=($("#liveSearch")?.value||"").toLocaleLowerCase();
+  const filtered=channels.filter(c=>(activeGroup==="Todos"||(c.group||"Otros")===activeGroup)&&(c.name||"").toLocaleLowerCase().includes(term));
+  const host=$("#liveChannels");if(!host)return;
+  host.innerHTML=filtered.length?filtered.map(c=>'<button type="button" class="secondary" data-live-url="'+safe(c.url)+'" style="min-height:76px;display:flex;align-items:center;gap:10px;text-align:left;padding:12px;overflow:hidden">'+
+   (c.logo?'<img src="'+safe(c.logo)+'" alt="" style="width:42px;height:42px;object-fit:contain" onerror="this.style.display=\\'none\\'">':'<span style="font-size:22px;color:#35c9f4">▶</span>')+
+   '<span style="min-width:0;overflow:hidden"><strong style="display:block;white-space:normal">'+safe(c.name)+'</strong><small style="display:block;color:#9baac0;margin-top:5px">'+safe(c.group||"Otros")+'</small></span></button>').join(""):'<div class="empty">No hay canales en esta categoría o búsqueda.</div>';
+  host.querySelectorAll("[data-live-url]").forEach(btn=>btn.onclick=()=>{const url=btn.getAttribute("data-live-url");const channel=channels.find(c=>c.url===url);if(channel)play({id:"live_"+channels.indexOf(channel),title:channel.name,streamUrl:channel.url})});
+ }
+ if(channels.length){
+  showChannels();
+  document.querySelectorAll("[data-live-group]").forEach(btn=>btn.onclick=()=>{activeGroup=btn.getAttribute("data-live-group");document.querySelectorAll("[data-live-group]").forEach(x=>x.classList.toggle("active",x===btn));showChannels()});
+  $("#liveSearch").oninput=showChannels;
+ }
+ function importText(text){
+  const parsed=parseM3U(text);
+  if(!parsed.length){status.textContent="No se encontraron canales con direcciones HTTP o HTTPS. Verifica que el archivo sea una lista M3U.";return}
+  try{localStorage.setItem("xuper_live_channels",JSON.stringify(parsed));toast("Lista M3U cargada: "+parsed.length+" canales");renderLive()}
+  catch(e){status.textContent="La lista es demasiado grande para guardarse en el almacenamiento del navegador."}
+ }
+ $("#liveFile").onchange=async e=>{const file=e.target.files&&e.target.files[0];if(!file)return;status.textContent="Leyendo "+file.name+"...";try{importText(await file.text())}catch(err){status.textContent="No se pudo leer el archivo seleccionado."}};
+ $("#loadLiveUrl").onclick=async()=>{const url=$("#liveUrl").value.trim();if(!/^https?:\/\//i.test(url)){status.textContent="Escribe una URL http:// o https:// válida.";return}status.textContent="Descargando lista...";try{const response=await fetch(url);if(!response.ok)throw new Error("HTTP "+response.status);importText(await response.text())}catch(err){status.textContent="No se pudo descargar la lista. El servidor puede bloquear CORS; intenta seleccionar el archivo M3U desde tu equipo."}};
+ const clear=$("#clearLive");if(clear)clear.onclick=()=>{if(confirm("¿Eliminar la lista M3U guardada en este dispositivo?")){localStorage.removeItem("xuper_live_channels");renderLive()}};
+}
 
 function renderAdmin(){
  if(!adminUnlocked){
