@@ -60,112 +60,83 @@ function navigate(v){view=v;activeFilter="Todos";gridLimit=48;document.querySele
 function renderSearch(){screen.innerHTML=`<h1 class="page-title">Buscar</h1><p class="subtle">Busca entre las películas, series, anime y contenido infantil del catálogo.</p><input id="searchInput" class="searchbox" type="text" placeholder="Escribe el nombre de una película o serie…" autocomplete="off"><div id="searchResults"></div>`;
  const input=$("#searchInput");input.addEventListener("input",()=>{searchTerm=input.value.trim().toLocaleLowerCase();let res=searchTerm?items().filter(x=>(x.title+" "+(x.alias||"")+" "+(x.genres||[]).join(" ")).toLocaleLowerCase().includes(searchTerm)).slice(0,120):[];$("#searchResults").innerHTML=res.length?`<div class="section-head"><h2>Resultados</h2><small>${res.length} coincidencias</small></div><div class="grid">${res.map(card).join("")}</div>`:searchTerm?`<div class="empty">No encontramos coincidencias.</div>`:"";bindCards()});}
 function parseM3U(text){
- const lines=String(text||"").replace(/^\uFEFF/,"").split(/\r?\n/),channels=[];let meta=null;
- for(const raw of lines){
-  const line=raw.trim();if(!line)continue;
+ const lines=String(text||"").replace(/^\uFEFF/,"").split(/\r?\n/),channels=[];
+ let meta=null;
+ for(let i=0;i<lines.length;i++){
+  const line=lines[i].trim();if(!line)continue;
   if(line.indexOf("#EXTINF:")===0){
    const comma=line.indexOf(","),header=comma>=0?line.slice(0,comma):line;
-   const attr=key=>{const match=header.match(new RegExp("(?:^|\\s)"+key+"=[\"']([^\"']*)[\"']","i"));return match?match[1]:""};
+   const attr=function(key){const match=header.match(new RegExp("(?:^|\\s)"+key+"=[\"']([^\"']*)[\"']","i"));return match?match[1]:""};
    meta={name:comma>=0?line.slice(comma+1).trim():"",logo:attr("tvg-logo"),group:attr("group-title")||"Otros"};
   }else if(line.charAt(0)!=="#"&&/^https?:\/\//i.test(line)){
-   channels.push({name:meta&&meta.name?meta.name:"Canal "+(channels.length+1),logo:meta&&meta.logo?meta.logo:"",group:meta&&meta.group?meta.group:"Otros",url:line});meta=null;
+   channels.push({name:meta&&meta.name?meta.name:"Canal "+(channels.length+1),logo:meta&&meta.logo?meta.logo:"",group:meta&&meta.group?meta.group:"Otros",url:line});
+   meta=null;
   }
  }
  return channels;
 }
 function renderLive(){
- let channels=[];try{const saved=JSON.parse(localStorage.getItem("xuper_live_channels")||"[]");if(Array.isArray(saved))channels=saved}catch(e){}
- const groups=["Todos"];channels.forEach(c=>{const g=c.group||"Otros";if(!groups.includes(g))groups.push(g)});
+ let channels=[];
+ try{const saved=JSON.parse(localStorage.getItem("xuper_live_channels")||"[]");if(Array.isArray(saved))channels=saved}catch(e){}
+ const groups=["Todos"];channels.forEach(function(c){const g=c.group||"Otros";if(groups.indexOf(g)<0)groups.push(g)});
  screen.innerHTML='<h1 class="page-title">TV en vivo</h1>'+
- '<div class="admin-card" style="max-width:100%"><div class="eyebrow">LISTA PERSONAL DE CANALES</div><h2 style="margin:10px 0">Agregar lista M3U / M3U8</h2>'+
- '<p class="subtle" style="line-height:1.5">Puedes seleccionar un archivo de tu computadora o memoria USB, o pegar la dirección web de una lista. La lista se guarda en este dispositivo.</p>'+
+ '<div class="setting" style="display:block"><div class="eyebrow">TU LISTA DE CANALES</div><h2 style="margin:10px 0">Agregar lista M3U / M3U8</h2>'+
+ '<p class="subtle" style="line-height:1.5">Selecciona un archivo de tu computadora o memoria USB. También puedes pegar una URL pública de una lista.</p>'+
+ '<input id="liveFile" type="file" accept=".m3u,.m3u8,audio/x-mpegurl,application/vnd.apple.mpegurl,text/plain" style="display:none">'+
  '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0">'+
- '<label for="liveFile" class="primary" style="display:inline-block;cursor:pointer">Seleccionar archivo M3U</label><input id="liveFile" type="file" accept=".m3u,.m3u8,audio/x-mpegurl,application/vnd.apple.mpegurl,text/plain" hidden>'+
+ '<button type="button" class="primary" id="chooseLiveFile">Seleccionar archivo M3U</button>'+
  '<input id="liveUrl" class="searchbox" type="url" placeholder="https://servidor/lista.m3u" style="flex:1;min-width:220px;width:auto;font-size:15px;padding:12px">'+
- '<button id="loadLiveUrl" class="secondary">Cargar URL</button>'+
- (channels.length?'<button id="clearLive" class="secondary">Eliminar lista</button>':'')+'</div>'+
- '<div id="liveStatus" class="admin-note">'+(channels.length?channels.length+' canales guardados en este dispositivo.':'Todavía no has agregado una lista.')+'</div></div>'+
+ '<button type="button" class="secondary" id="loadLiveUrl">Cargar URL</button>'+
+ (channels.length?'<button type="button" class="secondary" id="clearLive">Eliminar lista</button>':'')+'</div>'+
+ '<div id="liveStatus" class="subtle">'+(channels.length?channels.length+' canales guardados en este dispositivo.':'Todavía no has agregado una lista.')+'</div></div>'+
  (channels.length?'<div class="section-head"><h2>Canales</h2><small>'+channels.length+' disponibles</small></div>'+
  '<input id="liveSearch" class="searchbox" type="search" placeholder="Buscar canal..." style="font-size:15px;padding:12px">'+
- '<div id="liveGroups" class="filterbar">'+groups.map((g,i)=>'<button class="chip '+(i===0?'active':'')+'" data-live-group="'+safe(g)+'">'+safe(g)+'</button>').join("")+'</div>'+
+ '<div id="liveGroups" class="filterbar">'+groups.map(function(g,i){return '<button type="button" class="chip '+(i===0?'active':'')+'" data-live-group="'+safe(g)+'">'+safe(g)+'</button>'}).join("")+'</div>'+
  '<div id="liveChannels" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px;padding-bottom:30px"></div>':
- '<div class="empty" style="margin-top:18px">Cuando cargues una lista, los canales aparecerán aquí organizados por categoría.</div>');
- const status=$("#liveStatus");
- let activeGroup="Todos";
+ '<div class="empty" style="margin-top:18px">Después de cargar tu archivo, los canales aparecerán aquí.</div>');
+ const status=$("#liveStatus"),file=$("#liveFile");
+ $("#chooseLiveFile").onclick=function(){file.click()};
  function showChannels(){
-  const term=($("#liveSearch")?.value||"").toLocaleLowerCase();
-  const filtered=channels.filter(c=>(activeGroup==="Todos"||(c.group||"Otros")===activeGroup)&&(c.name||"").toLocaleLowerCase().includes(term));
-  const host=$("#liveChannels");if(!host)return;
-  host.innerHTML=filtered.length?filtered.map(c=>'<button type="button" class="secondary" data-live-url="'+safe(c.url)+'" style="min-height:76px;display:flex;align-items:center;gap:10px;text-align:left;padding:12px;overflow:hidden">'+
-   (c.logo?'<img src="'+safe(c.logo)+'" alt="" style="width:42px;height:42px;object-fit:contain" onerror="this.style.display=\\'none\\'">':'<span style="font-size:22px;color:#35c9f4">▶</span>')+
-   '<span style="min-width:0;overflow:hidden"><strong style="display:block;white-space:normal">'+safe(c.name)+'</strong><small style="display:block;color:#9baac0;margin-top:5px">'+safe(c.group||"Otros")+'</small></span></button>').join(""):'<div class="empty">No hay canales en esta categoría o búsqueda.</div>';
-  host.querySelectorAll("[data-live-url]").forEach(btn=>btn.onclick=()=>{const url=btn.getAttribute("data-live-url");const channel=channels.find(c=>c.url===url);if(channel)play({id:"live_"+channels.indexOf(channel),title:channel.name,streamUrl:channel.url})});
+  const search=$("#liveSearch"),term=search?search.value.toLocaleLowerCase():"",host=$("#liveChannels");if(!host)return;
+  const filtered=channels.filter(function(ch){return(activeGroup==="Todos"||(ch.group||"Otros")===activeGroup)&&(ch.name||"").toLocaleLowerCase().indexOf(term)>=0});
+  host.innerHTML=filtered.length?filtered.map(function(ch){return '<button type="button" class="secondary live-channel-entry" data-live-index="'+channels.indexOf(ch)+'" style="min-height:76px;display:flex;align-items:center;gap:10px;text-align:left;padding:12px;overflow:hidden">'+
+   (ch.logo?'<img src="'+safe(ch.logo)+'" alt="" style="width:42px;height:42px;object-fit:contain" onerror="this.style.display=\\'none\\'">':'<span style="font-size:22px;color:#35c9f4">▶</span>')+
+   '<span style="min-width:0;overflow:hidden"><strong style="display:block;white-space:normal">'+safe(ch.name)+'</strong><small style="display:block;color:#9baac0;margin-top:5px">'+safe(ch.group||"Otros")+'</small></span></button>'}).join(""):'<div class="empty">No hay canales en esta categoría o búsqueda.</div>';
+  host.querySelectorAll("[data-live-index]").forEach(function(btn){btn.onclick=function(){const ch=channels[Number(btn.getAttribute("data-live-index"))];if(ch)play({id:"live_"+btn.getAttribute("data-live-index"),title:ch.name,streamUrl:ch.url})}});
  }
- if(channels.length){
-  showChannels();
-  document.querySelectorAll("[data-live-group]").forEach(btn=>btn.onclick=()=>{activeGroup=btn.getAttribute("data-live-group");document.querySelectorAll("[data-live-group]").forEach(x=>x.classList.toggle("active",x===btn));showChannels()});
-  $("#liveSearch").oninput=showChannels;
- }
+ let activeGroup="Todos";
  function importText(text){
   const parsed=parseM3U(text);
-  if(!parsed.length){status.textContent="No se encontraron canales con direcciones HTTP o HTTPS. Verifica que el archivo sea una lista M3U.";return}
+  if(!parsed.length){status.textContent="No se encontraron canales con enlaces HTTP/HTTPS. Comprueba que el archivo tenga formato M3U.";return}
   try{localStorage.setItem("xuper_live_channels",JSON.stringify(parsed));toast("Lista M3U cargada: "+parsed.length+" canales");renderLive()}
-  catch(e){status.textContent="La lista es demasiado grande para guardarse en el almacenamiento del navegador."}
+  catch(e){status.textContent="No se pudo guardar la lista: el almacenamiento está lleno."}
  }
- $("#liveFile").onchange=async e=>{const file=e.target.files&&e.target.files[0];if(!file)return;status.textContent="Leyendo "+file.name+"...";try{importText(await file.text())}catch(err){status.textContent="No se pudo leer el archivo seleccionado."}};
- $("#loadLiveUrl").onclick=async()=>{const url=$("#liveUrl").value.trim();if(!/^https?:\/\//i.test(url)){status.textContent="Escribe una URL http:// o https:// válida.";return}status.textContent="Descargando lista...";try{const response=await fetch(url);if(!response.ok)throw new Error("HTTP "+response.status);importText(await response.text())}catch(err){status.textContent="No se pudo descargar la lista. El servidor puede bloquear CORS; intenta seleccionar el archivo M3U desde tu equipo."}};
- const clear=$("#clearLive");if(clear)clear.onclick=()=>{if(confirm("¿Eliminar la lista M3U guardada en este dispositivo?")){localStorage.removeItem("xuper_live_channels");renderLive()}};
+ file.onchange=function(){
+  const selectedFile=file.files&&file.files[0];if(!selectedFile)return;
+  status.textContent="Leyendo "+selectedFile.name+"...";
+  if(typeof FileReader!=="undefined"){
+   const reader=new FileReader();
+   reader.onload=function(){importText(reader.result||"")};
+   reader.onerror=function(){status.textContent="No se pudo leer el archivo. Intenta guardarlo como UTF-8."};
+   reader.readAsText(selectedFile);
+  }else if(selectedFile.text){
+   selectedFile.text().then(importText).catch(function(){status.textContent="No se pudo leer el archivo seleccionado."});
+  }else{status.textContent="Este navegador no permite leer archivos locales."}
+ };
+ $("#loadLiveUrl").onclick=async function(){
+  const url=$("#liveUrl").value.trim();
+  if(!/^https?:\/\//i.test(url)){status.textContent="Escribe una URL http:// o https:// válida.";return}
+  status.textContent="Descargando lista...";
+  try{const response=await fetch(url);if(!response.ok)throw new Error("HTTP "+response.status);importText(await response.text())}
+  catch(e){status.textContent="No se pudo descargar la URL. Puede estar bloqueada por CORS; en ese caso usa Seleccionar archivo M3U."}
+ };
+ if(channels.length){
+  showChannels();
+  document.querySelectorAll("[data-live-group]").forEach(function(btn){btn.onclick=function(){activeGroup=btn.getAttribute("data-live-group");document.querySelectorAll("[data-live-group]").forEach(function(x){x.classList.toggle("active",x===btn)});showChannels()}});
+  $("#liveSearch").oninput=showChannels;
+ }
+ const clear=$("#clearLive");if(clear)clear.onclick=function(){if(confirm("¿Eliminar la lista M3U guardada en este dispositivo?")){localStorage.removeItem("xuper_live_channels");renderLive()}};
 }
-
-function renderAdmin(){
- if(!adminUnlocked){
-  screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-card"><h2>Acceso de administrador</h2><p class="subtle">Inicia sesión para editar el catálogo.</p><form id="adminLogin" class="admin-form"><label>Usuario<input id="adminUser" class="searchbox" autocomplete="username" value="admin" required></label><label>Contraseña<input id="adminPass" class="searchbox" type="password" autocomplete="current-password" placeholder="Contraseña" required></label><button class="primary" type="submit">Iniciar sesión</button><div id="adminError" class="admin-error"></div></form></div>';
-  $("#adminLogin").onsubmit=e=>{e.preventDefault();if($("#adminUser").value.trim()==="admin"&&$("#adminPass").value===adminPassword()){adminUnlocked=true;renderAdmin()}else $("#adminError").textContent="Usuario o contraseña incorrectos."};
-  return;
- }
- const all=items();
- const own=store.get("admin_items");
- const filtered=all.filter(x=>(String(x.title||"")+" "+String(x.id||"")+" "+String(x.kind||"")+" "+String(x.category||"")).toLocaleLowerCase().includes(adminListQuery.toLocaleLowerCase())).slice(0,200);
- const editing=adminEditingId?all.find(x=>String(x.id)===String(adminEditingId)):null;
- const editForm=editing?'<div class="admin-card" id="adminEditor"><h2>Editar: '+safe(editing.title)+'</h2><form id="editContent" class="admin-form admin-grid">'+
- '<label>Título<input id="eTitle" class="searchbox" required maxlength="160"></label>'+
- '<label>Tipo<select id="eType" class="searchbox"><option value="movie">Película</option><option value="series">Serie</option><option value="infantil">Infantil</option><option value="anime">Anime</option><option value="other">Otro</option></select></label>'+
- '<label>Categoría<input id="eCategory" class="searchbox"></label><label>Año<input id="eYear" class="searchbox"></label>'+
- '<label>Géneros<input id="eGenres" class="searchbox"></label>'+
- '<label>URL del póster<input id="ePoster" class="searchbox" type="url"></label><label>URL horizontal<input id="eLandscape" class="searchbox" type="url"></label>'+
- '<label>URL de fondo<input id="eBackdrop" class="searchbox" type="url"></label><label class="wide">URL del video<input id="eStream" class="searchbox" type="url" placeholder="https://..."></label>'+
- '<label>Duración<input id="eDuration" class="searchbox"></label><label>Calificación<input id="eScore" class="searchbox"></label>'+
- '<label>Director<input id="eDirector" class="searchbox"></label><label>Reparto<input id="eActors" class="searchbox"></label>'+
- '<label class="wide">Sinopsis<textarea id="eSynopsis" class="searchbox" rows="4" maxlength="3000"></textarea></label>'+
- '<div class="wide actions"><button class="primary" type="submit">Guardar cambios</button><button class="secondary" type="button" id="cancelEdit">Cancelar</button></div></form></div>':'';
- screen.innerHTML='<h1 class="page-title">Administrador</h1><div class="admin-top"><p class="subtle">Gestiona películas, series y el resto del catálogo.</p><button class="secondary" id="adminLogout">Cerrar sesión</button></div>'+
- '<div class="admin-card"><h2>Editar contenido existente ('+all.length+')</h2><p class="admin-note">Busca un título y pulsa EDITAR para modificar información, imágenes o video.</p><input id="adminCatalogSearch" class="searchbox" placeholder="Buscar película o serie por nombre..." value="'+safe(adminListQuery)+'"><p class="admin-note">Coincidencias mostradas: '+filtered.length+'</p>'+
- (filtered.length?filtered.map(x=>'<div class="admin-entry"><span>'+safe(x.title||"Sin título")+' <small>'+safe(x.kind||x.category||"contenido")+'</small></span><button class="primary" data-edit-admin="'+safe(x.id)+'">EDITAR</button></div>').join(""):'<p class="subtle">No hay coincidencias. Prueba otro nombre.</p>')+'</div>'+editForm+
- '<div class="admin-card"><h2>Agregar contenido nuevo</h2><form id="addContent" class="admin-form admin-grid">'+
- '<label>Nombre<input id="cTitle" class="searchbox" required maxlength="120"></label><label>Tipo<select id="cType" class="searchbox"><option value="movie">Película</option><option value="series">Serie</option><option value="infantil">Infantil</option><option value="anime">Anime</option></select></label>'+
- '<label>Año<input id="cYear" class="searchbox" maxlength="4"></label><label>Géneros<input id="cGenres" class="searchbox" placeholder="Acción, Drama"></label>'+
- '<label>URL del póster<input id="cPoster" class="searchbox" type="url"></label><label>URL del video<input id="cStream" class="searchbox" type="url"></label>'+
- '<label class="wide">Sinopsis<textarea id="cSynopsis" class="searchbox" rows="3"></textarea></label><div class="wide"><button class="primary" type="submit">Guardar contenido</button></div></form></div>'+
- '<div class="admin-card"><h2>Cambiar contraseña</h2><form id="changeAdminPass" class="admin-form"><label>Nueva contraseña<input id="newAdminPass" class="searchbox" type="password" minlength="8" required></label><button class="secondary" type="submit">Actualizar contraseña</button></form></div>';
- $("#adminLogout").onclick=()=>{adminUnlocked=false;adminEditingId=null;renderAdmin()};
- $("#adminCatalogSearch").oninput=e=>{adminListQuery=e.target.value;const pos=e.target.selectionStart;renderAdmin();const input=$("#adminCatalogSearch");input.focus();input.setSelectionRange(pos,pos)};
- document.querySelectorAll("[data-edit-admin]").forEach(b=>b.onclick=()=>{adminEditingId=b.dataset.editAdmin;renderAdmin();const ed=$("#adminEditor");if(ed)ed.scrollIntoView({block:"start"})});
- $("#addContent").onsubmit=e=>{e.preventDefault();const title=$("#cTitle").value.trim(),type=$("#cType").value,poster=$("#cPoster").value.trim(),stream=$("#cStream").value.trim();if(!title){toast("Escribe un título.");return}if((poster&&!/^https?:\/\//i.test(poster))||(stream&&!/^https?:\/\//i.test(stream))){toast("Las URL deben comenzar con http:// o https://.");return}const kind=type==="movie"?"película":type==="series"?"serie":type;const added=store.get("admin_items");added.push({id:"admin_"+Date.now(),title,kind,type,category:type,year:$("#cYear").value.trim(),genres:$("#cGenres").value.split(",").map(x=>x.trim()).filter(Boolean),poster,streamUrl:stream,synopsis:$("#cSynopsis").value.trim(),row:"Agregado por administrador"});store.set("admin_items",added);toast("Contenido agregado.");adminListQuery=title;renderAdmin()};
- if(editing){
-  const val=(id,v)=>{const el=$(id);if(el)el.value=v==null?"":String(v)};
-  val("#eTitle",editing.title);val("#eType",["movie","series","infantil","anime"].includes(editing.type)?editing.type:(editing.kind==="infantil"||editing.kind==="anime"?editing.kind:(/serie/i.test(editing.kind||"")?"series":/pel[ií]cula/i.test(editing.kind||"")?"movie":"other")));
-  val("#eCategory",editing.category);val("#eYear",editing.year);val("#eGenres",Array.isArray(editing.genres)?editing.genres.join(", "):editing.genres);
-  val("#ePoster",editing.poster);val("#eLandscape",editing.landscape);val("#eBackdrop",editing.backdrop);val("#eStream",editing.streamUrl);val("#eDuration",editing.duration);val("#eScore",editing.score);val("#eDirector",editing.director);val("#eActors",editing.actors);val("#eSynopsis",editing.synopsis);
-  $("#cancelEdit").onclick=()=>{adminEditingId=null;renderAdmin()};
-  $("#editContent").onsubmit=e=>{e.preventDefault();const urls=["#ePoster","#eLandscape","#eBackdrop","#eStream"].map(id=>$(id).value.trim());if(urls.some(u=>u&&!/^https?:\/\//i.test(u))){toast("Las URL deben comenzar con http:// o https://.");return}
-   const type=$("#eType").value,kind=type==="movie"?"película":type==="series"?"serie":type==="other"?(editing.kind||"contenido"):type;
-   const patch={title:$("#eTitle").value.trim(),type:type==="other"?(editing.type||"other"):type,kind,category:$("#eCategory").value.trim()||type,year:$("#eYear").value.trim(),genres:$("#eGenres").value.split(",").map(x=>x.trim()).filter(Boolean),poster:urls[0],landscape:urls[1],backdrop:urls[2],streamUrl:urls[3],duration:$("#eDuration").value.trim(),score:$("#eScore").value.trim(),director:$("#eDirector").value.trim(),actors:$("#eActors").value.trim(),synopsis:$("#eSynopsis").value.trim()};
-   const overrides=readAdminOverrides();overrides[String(editing.id)]=patch;try{localStorage.setItem("xuper_admin_overrides",JSON.stringify(overrides));const check=JSON.parse(localStorage.getItem("xuper_admin_overrides")||"{}");if(!check[String(editing.id)]||check[String(editing.id)].title!==patch.title||check[String(editing.id)].streamUrl!==patch.streamUrl)throw new Error("No se pudo verificar el guardado");toast("Cambios guardados correctamente en este dispositivo.");adminEditingId=null;renderAdmin()}catch(err){toast("No se pudieron guardar los cambios. Revisa el almacenamiento disponible.")}
-  };
- }
- $("#changeAdminPass").onsubmit=e=>{e.preventDefault();const p=$("#newAdminPass").value;if(p.length<8){toast("Usa al menos 8 caracteres.");return}try{localStorage.setItem("xuper_admin_password",p);toast("Contraseña actualizada.");$("#newAdminPass").value=""}catch(_){toast("No se pudo guardar la contraseña.")}};
-}
-
 function renderSettings(){screen.innerHTML=`<h1 class="page-title">Ajustes</h1><p class="subtle">Conexión con el servicio de portal</p><div class="settings">
 <div class="setting"><strong>Servicio XuperTV</strong><span>Introduce la dirección HTTPS de tu propio adaptador Node. VIDAA ejecuta la interfaz HTML5; la autenticación, cifrado 3DES y solicitudes al portal deben ejecutarse fuera del navegador.</span><input id="portalApiUrl" class="searchbox" style="font-size:15px;margin-top:12px;width:100%" placeholder="https://tu-servidor.example" value="${safe(portalConfig.get())}"><div class="actions"><button class="primary" id="savePortalApi">Guardar y probar</button><span id="portalStatus" class="subtle"></span></div></div>
 <div class="setting"><strong>Catálogo local</strong><span>${items().length} fichas de respaldo. El servicio conectado puede resolver reproducción mediante el endpoint /api/resolve.</span></div>
