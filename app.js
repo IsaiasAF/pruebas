@@ -1,3 +1,4 @@
+// Re-publicacion de app.js para completar el despliegue en GitHub Pages.
 (()=>{"use strict";
 const $=s=>document.querySelector(s), screen=$("#screen"), modal=$("#modal"), detail=$("#detail"), player=$("#player"), video=$("#video");
 let catalog={items:[]}, view="home", selected=null, activeFilter="Todos", searchTerm="", focusIndex=0, gridLimit=48, lastFocus=null, adminUnlocked=false, adminEditingId=null, adminListQuery="";
