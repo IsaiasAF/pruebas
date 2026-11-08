@@ -27,3 +27,25 @@ button:focus-visible,input:focus-visible{outline:3px solid #49d0ff;outline-offse
 .admin-card{max-width:100%;overflow:visible}
 .admin-entry{min-height:54px}
 .admin-entry .primary{min-width:110px}
+
+
+/* TV en vivo: importación de listas M3U y canales */
+.live-tools{max-width:1100px;background:#111e32;border:1px solid #ffffff18;border-radius:14px;padding:22px;margin:18px 0}
+.live-import{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.live-import h2,.live-list-head h2{margin:8px 0;font-size:21px}
+.live-import p{margin:6px 0;line-height:1.5}
+.live-file-label{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;cursor:pointer}
+.live-url-row{display:flex;gap:10px;align-items:center;margin-top:18px;flex-wrap:wrap}
+.live-url-row .searchbox{flex:1;min-width:260px;width:auto;font-size:15px;padding:13px}
+.live-list-head{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:24px 0 8px}
+.live-list-head .searchbox{width:min(380px,55%);font-size:15px;padding:12px}
+.live-channel-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:6px 2px 28px}
+.live-channel{min-height:82px;display:flex;align-items:center;gap:12px;text-align:left;padding:12px;background:#111e32;border:1px solid #ffffff18;border-radius:10px}
+.live-channel:focus{outline:3px solid #49d0ff;outline-offset:2px;background:#183653}
+.live-channel img{width:48px;height:48px;object-fit:contain;background:#091321;border-radius:7px}
+.live-channel>span:nth-child(2){font-weight:bold;flex:1;overflow:hidden;text-overflow:ellipsis}
+.live-channel small{color:#8fa0b8;font-size:10px}
+.live-channel-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:7px;background:#1a3858;color:#49d0ff;font-size:20px}
+.live-empty{margin-top:18px}
+@media(max-width:1100px){.live-channel-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.live-import,.live-list-head{align-items:stretch;flex-direction:column}.live-list-head .searchbox{width:100%}.live-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
